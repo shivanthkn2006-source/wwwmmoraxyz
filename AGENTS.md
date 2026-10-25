@@ -46,3 +46,4 @@
 - Cascade URL image downloads use a stream-counted byte ceiling and one header-plus-body deadline; inline/API responses and legacy non-image passthrough require separate budgets, because post-allocation checks cannot bound downloads.
 - Public information pages share PublicInfoFooter and routeSeo metadata; PlatformLayout supplies main only for known member routes without their own landmark, preventing nested mains and divergent policy links.
 - Both visitor measurement and deferred member activity measurement use the shared consent gate; unresolved regions deny measurement, because startup timing must not authorize optional tracking.
+- ImageViewer uses Radix modal focus and Escape handling; social card actions use separate semantic controls, because nested click surfaces lose keyboard access and focus restoration.
