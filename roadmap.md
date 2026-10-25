@@ -1,9 +1,10 @@
 # M'Mora Village roadmap
 
 ## Oct 25 v12 continuation — remaining launch evidence
-- [ ] Reconcile all 20 public checklist items and 11 inherited audit groups without counting superseded roadmap entries as fresh defects.
-- [ ] Trace and repair the next confirmed image destination gap with controlled tests only; preserve active generation and unrelated UI.
-- [ ] Recheck public information/sign-in/footer navigation, consent and desktop/phone rendering in a test browser; record observed and external evidence separately in v13.
+- [x] Reconcile all 20 public checklist items and 11 inherited audit groups in v13; nine groups remain incomplete, all 20 retain closure limitations. Restore omitted Pixazo output-contract blocker; do not sum superseded roadmap entries.
+- [x] Remove dormant Infinity returned-URL downloader; harden Kaleido normalization and reject Kaleido/JustAPI/ImageNow download redirects. 70 focused / 1,697 full-suite passes, six hosted skips; 84 affected deployments acknowledged, no jobs/member writes.
+- [x] Recheck seven public routes at desktop/phone (14 combinations); FAQ keyboard and cookie reopening work, no empty pages/errors/overflow. All screenshots inspected; build OK. v13 saved and collection membership pending upload.
+- [ ] Next code-safe stage: trace #5 export/deletion pagination and partial-failure handling using fake data, not production deletion. Pixazo output destination contract and broader #4 aggregate/cancellation budgets remain open.
 - [ ] Hosted privacy identities, physical devices/screen readers, authoritative provider contracts and operator/legal decisions remain external closure dependencies.
 
 ## Oct 25 isolated privacy continuation
