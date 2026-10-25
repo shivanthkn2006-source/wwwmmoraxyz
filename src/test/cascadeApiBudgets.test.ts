@@ -115,7 +115,7 @@ describe('kaleido destination validation', () => {
 
 describe('cascadeFetch signal forwarding', () => {
   it('a pre-aborted caller signal stops the cascade instead of running providers', async () => {
-    const fetcher = vi.fn();
+    const fetcher = vi.fn(async () => new Response('unexpected'));
     globalThis.fetch = fetcher as any;
     const res = await cascadeFetch('https://image.pollinations.ai/prompt/test?width=256&height=256', { signal: AbortSignal.abort() });
     expect(res.status).toBe(502);
