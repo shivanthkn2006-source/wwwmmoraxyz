@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 25 v14 — QA finding + audit reconciliation
+- [x] Reconciled v13: nine of 11 audit groups still incomplete (#1/#2 bounded, #3/#4 partial, #5–#11 open); one open Project monitoring QA finding claimed and fixed.
+- [x] Fixed Messages-list hover hiding name/last message: content raised to relative z-10, overlay hover fill changed from opaque accent to subtle foreground/5 tint in ChatUserCard and FriendCard. New regression test; 4 focused passes; full suite 1,698 passed / 0 failed / 6 skipped; build OK. Signed-in Playwright hover verified at 2x — name, username, last message all visible; zero page errors.
+- [ ] Next code-safe stage unchanged: #5 privacy export/deletion caller and failure-handling trace with fake-data tests. Pixazo output contract, isolated privacy identities, devices/screen readers and operator/legal records remain external blockers.
+
 ## Oct 25 v12 continuation — remaining launch evidence
 - [x] Reconcile all 20 public checklist items and 11 inherited audit groups in v13; nine groups remain incomplete, all 20 retain closure limitations. Restore omitted Pixazo output-contract blocker; do not sum superseded roadmap entries.
 - [x] Remove dormant Infinity returned-URL downloader; harden Kaleido normalization and reject Kaleido/JustAPI/ImageNow download redirects. 70 focused / 1,697 full-suite passes, six hosted skips; 84 affected deployments acknowledged, no jobs/member writes.
