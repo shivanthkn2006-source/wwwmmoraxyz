@@ -75,13 +75,13 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
     case 'pollinations': {
       const token = Deno.env.get('POLLINATIONS_API_KEY');
       const full = `${o.prompt}, no text, no words, no letters, no watermark, no logo`;
-      return getImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=${w}&height=${h}&nologo=true&enhance=true&seed=${n % 100000}`, token ? { Authorization: `Bearer ${token}` } : {}, 1024, o.redirect);
+      return getImage(`https://image.pollinations.ai/prompt/${encodeURIComponent(full)}?width=${w}&height=${h}&nologo=true&enhance=true&seed=${n % 100000}`, token ? { Authorization: `Bearer ${token}` } : {}, 1024, o.redirect, fetch, o.signal);
     }
     case 'placeholdr': {
       const url = `https://placeholdr.dev/${w}x${h}/${encodeURIComponent(o.prompt.slice(0, 300))}?style=cartoon&seed=${(n % 3) + 1}`;
       // The service renders asynchronously: 202 + SVG spinner while pending.
       for (let i = 0; i < 6; i++) {
-        const out = await getImage(url, {}, 1024, o.redirect);
+        const out = await getImage(url, {}, 1024, o.redirect, fetch, o.signal);
         if (typeof out !== 'string' && !out.type.includes('svg')) return out;
         if (typeof out === 'string' && out !== 'pending' && !out.includes('svg')) return out;
         await sleep(4000);
@@ -127,7 +127,7 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
       if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
       const data = await readJsonBounded<{ output_url?: unknown }>(res);
       const url = deepaiImageUrl(data?.output_url);
-      return url ? getImage(url, {}, 1024, 'manual') : 'unsupported image destination';
+      return url ? getImage(url, {}, 1024, 'manual', fetch, o.signal) : 'unsupported image destination';
     }
     case 'pixazo': {
       const key = Deno.env.get('PIXAZO_API_KEY'); if (!key) return 'not configured';
@@ -135,7 +135,7 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
       if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
       const d = await readJsonBounded<{ output?: string; imageUrl?: string; url?: string }>(res);
       const url = d?.output || d?.imageUrl || d?.url;
-      return url ? getImage(url, {}, 1024, o.redirect) : 'no image';
+      return url ? getImage(url, {}, 1024, o.redirect, fetch, o.signal) : 'no image';
     }
     case 'kaleido': {
       if (!o.keywords.length) return 'no keywords';
@@ -151,9 +151,9 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
     }
     case 'justapi':
       // Abstract art is a compact SVG, so accept a smaller payload.
-      return getImage(`https://photos.justapi.dev/abstract/${w}/${h}?seed=${encodeURIComponent(kw)}`, {}, 300, o.redirect);
+      return getImage(`https://photos.justapi.dev/abstract/${w}/${h}?seed=${encodeURIComponent(kw)}`, {}, 300, o.redirect, fetch, o.signal);
     case 'imagenow':
-      return getImage(`https://my.imagenow.dev/${w}x${h}/1b2440/c8a96a.png`, {}, 1024, o.redirect);
+      return getImage(`https://my.imagenow.dev/${w}x${h}/1b2440/c8a96a.png`, {}, 1024, o.redirect, fetch, o.signal);
   }
 }
 
@@ -165,6 +165,7 @@ export async function fetchImageCascade(opts: CascadeOptions): Promise<CascadeRe
     seed: opts.seed ?? opts.prompt,
     keywords: opts.keywords?.length ? opts.keywords : deriveKeywords(opts.prompt),
     redirect: opts.redirect,
+    signal: opts.signal,
   };
   const log: CascadeAttempt[] = [];
   for (const p of CASCADE_ORDER) {
@@ -197,7 +198,7 @@ export async function cascadeFetch(url: string, _init?: RequestInit): Promise<Re
   const prompt = decodeURIComponent(u.pathname.replace(/^\/prompt\//, ''));
   const width = Number(u.searchParams.get('width')) || 1024;
   const height = Number(u.searchParams.get('height')) || 1024;
-  const art = await fetchImageCascade({ prompt, width, height, seed: u.searchParams.get('seed') ?? undefined, redirect: _init?.redirect });
+  const art = await fetchImageCascade({ prompt, width, height, seed: u.searchParams.get('seed') ?? undefined, redirect: _init?.redirect, signal: _init?.signal ?? undefined });
   if (!art.bytes) return new Response(JSON.stringify({ error: 'all image providers failed', log: art.log }), { status: 502 });
   return new Response(art.bytes as unknown as BodyInit, { status: 200, headers: { 'content-type': art.contentType.split(';')[0], 'x-image-provider': art.provider ?? '' } });
 }
