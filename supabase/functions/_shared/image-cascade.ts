@@ -44,7 +44,12 @@ export interface CascadeOptions {
 /** Root-relative paths only: no protocol-relative, traversal or query smuggling. */
 function kaleidoImagePath(url: unknown): string | null {
   if (typeof url !== 'string') return null;
-  if (!/^\/(?!\/)[^?#]*$/.test(url) || url.includes('..')) return null;
+  if (!/^\/(?!\/)[^?#]*$/.test(url) || /[\\\s\x00-\x1f\x7f]/.test(url)) return null;
+  try {
+    const decoded = decodeURIComponent(url);
+    if (decoded.includes('..') || /[\\?#\x00-\x1f\x7f]/.test(decoded) || decoded.startsWith('//')) return null;
+    if (new URL(url, 'https://kaleidoimages.ai').origin !== 'https://kaleidoimages.ai') return null;
+  } catch { return null; }
   return url;
 }
 
@@ -147,15 +152,15 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
         if (!res?.ok) { await res?.body?.cancel(); continue; }
         const data = await readJsonBounded<{ results?: { url: string; relevance?: number }[] }>(res);
         const best = (data?.results ?? []).filter((r) => (r.relevance ?? 0) >= 3 && kaleidoImagePath(r.url));
-        if (best.length) return getImage(`https://kaleidoimages.ai${kaleidoImagePath(best[n % best.length].url)}`, {}, 1024, o.redirect, fetch, o.signal);
+        if (best.length) return getImage(`https://kaleidoimages.ai${kaleidoImagePath(best[n % best.length].url)}`, {}, 1024, 'manual', fetch, o.signal);
       }
       return 'no keyword match';
     }
     case 'justapi':
       // Abstract art is a compact SVG, so accept a smaller payload.
-      return getImage(`https://photos.justapi.dev/abstract/${w}/${h}?seed=${encodeURIComponent(kw)}`, {}, 300, o.redirect, fetch, o.signal);
+      return getImage(`https://photos.justapi.dev/abstract/${w}/${h}?seed=${encodeURIComponent(kw)}`, {}, 300, 'manual', fetch, o.signal);
     case 'imagenow':
-      return getImage(`https://my.imagenow.dev/${w}x${h}/1b2440/c8a96a.png`, {}, 1024, o.redirect, fetch, o.signal);
+      return getImage(`https://my.imagenow.dev/${w}x${h}/1b2440/c8a96a.png`, {}, 1024, 'manual', fetch, o.signal);
   }
 }
 
