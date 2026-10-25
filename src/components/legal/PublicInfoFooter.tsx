@@ -13,7 +13,7 @@ export default function PublicInfoFooter() {
           </Link>
         ))}
       </nav>
-      <p className="mt-3">© {new Date().getFullYear()} M'Mora. Member content remains its owners' property.</p>
+      <p className="mt-3">© {new Date().getFullYear()} M'Mora. See Terms for content ownership and permitted use.</p>
     </footer>
   );
 }

@@ -172,6 +172,7 @@ export const CalendarView = () => {
               variant="outline"
               size="sm"
               onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+              aria-label="Previous month"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -182,6 +183,7 @@ export const CalendarView = () => {
               variant="outline"
               size="sm"
               onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+              aria-label="Next month"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

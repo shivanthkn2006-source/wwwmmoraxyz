@@ -124,6 +124,7 @@ export const ConversationEmailSection: React.FC = () => {
             </p>
           </div>
           <Switch
+            aria-label="Daily conversation recap"
             checked={digest}
             disabled={loading}
             onCheckedChange={(checked) => {

@@ -379,6 +379,7 @@ export const RemindersManager = () => {
                         size="sm"
                         variant="ghost"
                         onClick={() => deleteReminder(reminder.id)}
+                        aria-label={`Delete reminder: ${reminder.title}`}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
