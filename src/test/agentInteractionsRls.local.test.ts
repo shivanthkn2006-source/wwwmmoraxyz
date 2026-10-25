@@ -86,6 +86,17 @@ describe('agent_interactions local PostgreSQL isolation (mock identities, no net
     await expect(asMember(A, () => db.query('UPDATE public.agent_interactions SET user_id=$1 WHERE id=$2', [B, ROW_A]))).rejects.toMatchObject({ code: '42501' });
     expect((await asMember(A, () => db.query('SELECT user_id FROM public.agent_interactions WHERE id=$1', [ROW_A]))).rows).toEqual([{ user_id: A }]);
   });
+  it('allows owner update/readback, refreshes timestamp and allows owner deletion', async () => {
+    await asMember(A, () => db.query('UPDATE public.agent_interactions SET updated_at=$1 WHERE id=$2', ['2000-01-01T00:00:00Z', ROW_A]));
+    const result = await asMember(A, () => db.query<{ context_payload: { owner: string }; touched: boolean }>("UPDATE public.agent_interactions SET context_payload=$1 WHERE id=$2 RETURNING context_payload, updated_at > '2000-01-01'::timestamptz AS touched", [JSON.stringify({ owner: 'updated-a' }), ROW_A]));
+    expect(result.rows).toEqual([{ context_payload: { owner: 'updated-a' }, touched: true }]);
+    const readback = await asMember(A, () => db.query('SELECT context_payload FROM public.agent_interactions WHERE id=$1', [ROW_A]));
+    expect(readback.rows).toEqual([{ context_payload: { owner: 'updated-a' } }]);
+    const deleted = await asMember(A, () => db.query('DELETE FROM public.agent_interactions WHERE id=$1 RETURNING id', [ROW_A]));
+    expect(deleted.rows).toEqual([{ id: ROW_A }]);
+    expect((await asMember(A, () => db.query('SELECT id FROM public.agent_interactions WHERE id=$1', [ROW_A]))).rows).toEqual([]);
+    expect((await asMember(B, select)).rows).toEqual([{ id: ROW_B, user_id: B }]);
+  });
   it('detects a deliberately permissive policy rather than yielding false-green evidence', async () => {
     await db.exec('CREATE POLICY fixture_bad_read ON public.agent_interactions FOR SELECT TO authenticated USING (true)');
     const leaked = await asMember(A, select);
