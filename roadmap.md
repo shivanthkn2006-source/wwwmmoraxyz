@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 25 v12 continuation — remaining launch evidence
+- [ ] Reconcile all 20 public checklist items and 11 inherited audit groups without counting superseded roadmap entries as fresh defects.
+- [ ] Trace and repair the next confirmed image destination gap with controlled tests only; preserve active generation and unrelated UI.
+- [ ] Recheck public information/sign-in/footer navigation, consent and desktop/phone rendering in a test browser; record observed and external evidence separately in v13.
+- [ ] Hosted privacy identities, physical devices/screen readers, authoritative provider contracts and operator/legal decisions remain external closure dependencies.
+
 ## Oct 25 isolated privacy continuation
 - [x] Trace six live skips: zero of seven isolation settings present. Nine in-memory PostgreSQL migration/RLS tests pass with mocked identities/no HTTP; positive owner update/delete and B self-read gaps repaired in the still-skipped live fixture. No production policy change.
 - [x] Document local SQL proof separately from hosted Auth/Data API proof in v11; full suite 1,666 passed / six skipped, build OK. Nine inherited audit groups remain incomplete.
