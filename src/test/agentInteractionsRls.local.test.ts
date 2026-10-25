@@ -87,8 +87,7 @@ describe('agent_interactions local PostgreSQL isolation (mock identities, no net
     expect((await asMember(A, () => db.query('SELECT user_id FROM public.agent_interactions WHERE id=$1', [ROW_A]))).rows).toEqual([{ user_id: A }]);
   });
   it('allows owner update/readback, refreshes timestamp and allows owner deletion', async () => {
-    await asMember(A, () => db.query('UPDATE public.agent_interactions SET updated_at=$1 WHERE id=$2', ['2000-01-01T00:00:00Z', ROW_A]));
-    const result = await asMember(A, () => db.query<{ context_payload: { owner: string }; touched: boolean }>("UPDATE public.agent_interactions SET context_payload=$1 WHERE id=$2 RETURNING context_payload, updated_at > '2000-01-01'::timestamptz AS touched", [JSON.stringify({ owner: 'updated-a' }), ROW_A]));
+    const result = await asMember(A, () => db.query<{ context_payload: { owner: string }; touched: boolean }>("UPDATE public.agent_interactions SET context_payload=$1, updated_at='2000-01-01'::timestamptz WHERE id=$2 RETURNING context_payload, updated_at > '2000-01-01'::timestamptz AS touched", [JSON.stringify({ owner: 'updated-a' }), ROW_A]));
     expect(result.rows).toEqual([{ context_payload: { owner: 'updated-a' }, touched: true }]);
     const readback = await asMember(A, () => db.query('SELECT context_payload FROM public.agent_interactions WHERE id=$1', [ROW_A]));
     expect(readback.rows).toEqual([{ context_payload: { owner: 'updated-a' } }]);
