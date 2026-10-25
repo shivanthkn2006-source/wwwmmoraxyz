@@ -27,6 +27,16 @@ describe('social keyboard actions', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Open conversation with Ari' }));
   expect(open).toHaveBeenCalledWith('member-a');
  });
+  it('keeps conversation details painted above the hover layer', () => {
+  render(<MemoryRouter><ChatUserCard user={{ user_id: 'member-a', display_name: 'Ari', username: 'ari', last_message: { content: 'See you soon', created_at: '2026-10-25' } } as React.ComponentProps<typeof ChatUserCard>['user']} onClick={vi.fn()} /></MemoryRouter>);
+  const overlay = screen.getByRole('button', { name: 'Open conversation with Ari' });
+  expect(overlay.className).toContain('absolute');
+  expect(overlay.className).toContain('hover:bg-foreground/5');
+  expect(overlay.className).not.toContain('hover:bg-accent ');
+  const details = screen.getByText('Ari').closest('div.pointer-events-none');
+  expect(details?.className).toContain('relative');
+  expect(details?.className).toContain('z-10');
+ });
  it('closes the image viewer with Escape', () => {
   function Harness() { const [open, setOpen] = useState(true); return open ? <ImageViewer imageUrl="data:image/png;base64," alt="Garden photo" onClose={() => setOpen(false)} /> : null; }
   render(<Harness />);
