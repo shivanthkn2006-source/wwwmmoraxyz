@@ -84,6 +84,36 @@ describe('DHF storage destination boundary', () => {
     expect(f.cascade).not.toHaveBeenCalled();
     expect(f.network.mock.calls[0]?.[1]).toEqual(expect.objectContaining({ method: 'POST', body: expect.any(Uint8Array) }));
   });
+  it('never uploads oversized direct or inline fallback bodies', async () => {
+    const oversized = () => new Response(new Uint8Array(6 * 1024 * 1024 + 1), { headers: { 'content-type': 'image/png' } });
+    const f = storageFixture(vi.fn().mockResolvedValue(oversized()));
+    f.cascade.mockResolvedValue(oversized());
+    expect(await f.store('fixture-user', '2026-10-25', '06:00', supported)).toBeNull();
+    expect(f.cascade).toHaveBeenCalledTimes(1);
+    expect(f.network).not.toHaveBeenCalled();
+  });
+  it('keeps fallback after oversized direct download', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, {
+      headers: { 'content-type': 'image/png', 'content-length': String(6 * 1024 * 1024 + 1) },
+    }));
+    const f = storageFixture(url => fetchDhfImage(url, fetcher));
+    expect(await f.store('fixture-user', '2026-10-25', '06:00', supported)).toBe('fixture-user/2026-10-25/06-00.jpg');
+    expect(f.network).toHaveBeenCalledTimes(1);
+    expect(f.network.mock.calls[0]?.[1]?.body).toHaveLength(1200);
+  });
+  it('never uploads a stalled fallback body after its deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const cancel = vi.fn();
+      const f = storageFixture(vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+      f.cascade.mockResolvedValue(new Response(new ReadableStream({ cancel }), { headers: { 'content-type': 'image/png' } }));
+      const stored = f.store('fixture-user', '2026-10-25', '06:00', supported);
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(await stored).toBeNull();
+      expect(cancel).toHaveBeenCalledTimes(1);
+      expect(f.network).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
   it.each([undefined, 'error'] as const)('cascade image downloads preserve opt-in redirect setting %s', async redirect => {
     const network = vi.fn<typeof fetch>().mockResolvedValue(new Response(new Uint8Array(1200), { headers: { 'content-type': 'image/png' } }));
     vi.stubGlobal('fetch', network);
