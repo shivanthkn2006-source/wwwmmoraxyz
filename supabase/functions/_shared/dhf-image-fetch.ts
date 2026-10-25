@@ -38,5 +38,5 @@ export async function fetchDhfImage(value: unknown, fetcher: typeof fetch = fetc
     if (status < 200 || status >= 300) return new Response(null, { status });
     throw new Error(image);
   }
-  return new Response(image.bytes, { status, headers: { 'content-type': image.type } });
+  return new Response(new Uint8Array(image.bytes).buffer, { status, headers: { 'content-type': image.type } });
 }
