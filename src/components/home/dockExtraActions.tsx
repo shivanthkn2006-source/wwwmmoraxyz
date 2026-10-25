@@ -197,6 +197,7 @@ export function buildExtraDockItems(
       !taken.has(path) &&
       !NON_MENU_ROUTES.has(path) &&
       (isAdmin || !isAdminOnlyRoute(path)) &&
+      !path.startsWith('/__') &&
       !NON_MENU_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
     ))
     .map(({ path, label }) => ({

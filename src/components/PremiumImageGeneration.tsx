@@ -70,7 +70,7 @@ const PremiumImageGeneration = ({ isOpen, onClose }: PremiumImageGenerationProps
           const { data, error } = await supabase.functions.invoke('edit-image', {
             body: { 
               prompt: prompt.trim(),
-              image: base64
+              imageBase64: base64
             }
           });
 

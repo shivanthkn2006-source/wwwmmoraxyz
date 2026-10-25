@@ -259,7 +259,7 @@ const WebdropPage = () => {
                   try {
                     const { data, error } = await supabase.functions.invoke('edit-image', {
                       body: { 
-                        image: base64,
+                        imageBase64: base64,
                         prompt: cleanPrompt
                       }
                     });
