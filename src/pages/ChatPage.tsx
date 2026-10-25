@@ -508,15 +508,16 @@ const ChatPage = () => {
         {!selectMode ? (
           <>
             <div className="relative">
+              <Button variant="ghost" size="icon" aria-label="View profile photo" disabled={!selectedUser?.profile_photo_url} onClick={() => setShowProfileViewer(true)}>
               <Avatar 
                 className="w-10 h-10 cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => selectedUser?.profile_photo_url && setShowProfileViewer(true)}
               >
                 <AvatarImage src={selectedUser?.profile_photo_url} />
                 <AvatarFallback className="bg-transparent text-white text-[9px] font-medium">
                   M'Mora
                 </AvatarFallback>
               </Avatar>
+              </Button>
               <StatusIconBadge status={selectedUser?.status} size="sm" />
             </div>
 
