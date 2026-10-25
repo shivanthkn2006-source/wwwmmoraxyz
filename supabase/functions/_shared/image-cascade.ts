@@ -170,6 +170,7 @@ export async function fetchImageCascade(opts: CascadeOptions): Promise<CascadeRe
   const log: CascadeAttempt[] = [];
   for (const p of CASCADE_ORDER) {
     if (opts.only && !opts.only.includes(p)) continue;
+    if (cfg.signal?.aborted) break; // caller cancelled: stop before the next provider
     const t = Date.now();
     const out = await runProvider(p, cfg);
     if (typeof out !== 'string') {

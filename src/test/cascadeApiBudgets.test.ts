@@ -14,15 +14,17 @@ import {
 import { cascadeFetch, fetchImageCascade } from '../../supabase/functions/_shared/image-cascade';
 
 function streamResponse(chunks: Uint8Array[], headers: Record<string, string> = {}, status = 200): Response {
-  const stream = new ReadableStream<Uint8Array>((controller) => {
-    for (const chunk of chunks) controller.enqueue(chunk);
-    controller.close();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      controller.close();
+    },
   });
   return new Response(stream, { status, headers });
 }
 
 function stalledResponse(): Response {
-  return new Response(new ReadableStream<Uint8Array>(() => {}), { status: 200 });
+  return new Response(new ReadableStream<Uint8Array>({}), { status: 200 });
 }
 
 const realFetch = globalThis.fetch;
