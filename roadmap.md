@@ -1,8 +1,9 @@
 # M'Mora Village roadmap
 
 ## Oct 25 accessibility follow-up
-- [ ] Repair confirmed keyboard gaps in social cards, comments, image viewer, post grid and attachment navigation.
-- [ ] Recheck desktop/mobile, keyboard focus and accessible names; refresh all 20 checklist rows with bounded evidence.
+- [x] Repair confirmed keyboard gaps in social cards, comments, image viewer, post grid and attachment navigation.
+- [x] Recheck 24 desktop/mobile pre-repair views and isolated updated-source keyboard/focus checks; full suite 1,646 passed, six skipped; all 20 rows refreshed in v9.
+- [ ] Remaining coverage: live post-repair preview served stale modules; isolated viewer visual layering unverified, mobile member navigation cramped. Real assistive technology/devices, isolated identities, legal/operator/vendor records unavailable.
 
 ## Oct 25 public launch and accessibility recheck
 - [x] Reconcile all 20 screenshot items in the version 8 Files report; source presence is not launch closure.
