@@ -1,6 +1,10 @@
 // Records page visits, time spent and sign-in/out events for the admin-only analytics page.
 // Runs once per tab, off the boot path; every call is fire-and-forget.
+// Visit/page measurement is non-essential: it waits for consent in regions that
+// require it and stops immediately on refusal. Sign-in/out security records are
+// essential and always sent.
 import { supabase } from '@/integrations/supabase/client';
+import { analyticsAllowed, onConsentChange } from '@/lib/consent';
 
 const FN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/track-visit`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
