@@ -70,8 +70,7 @@ export function setConsent(analytics: AnalyticsChoice): ConsentRecord {
 export function analyticsAllowed(): boolean {
   const c = getConsent();
   if (c) return c.analytics === 'granted';
-  if (regionState === 'consent-region') return false;
-  return true; // open region or still resolving: nothing non-essential has been blocked yet
+  return regionState === 'open-region'; // unresolved location must not authorize measurement
 }
 
 /** True while the visitor owes a decision (consent region, no saved choice). */

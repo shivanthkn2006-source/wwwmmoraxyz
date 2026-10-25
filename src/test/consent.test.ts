@@ -25,6 +25,13 @@ beforeEach(() => {
 });
 
 describe('consent region resolution', () => {
+  it('blocks measurement until the region is resolved', async () => {
+    expect(getRegionState()).toBe('pending');
+    expect(analyticsAllowed()).toBe(false);
+    mockTrace('loc=DE\n');
+    await resolveRegion();
+    expect(analyticsAllowed()).toBe(false);
+  });
   it('treats an EU country as a consent region', async () => {
     mockTrace('loc=DE\n');
     await resolveRegion();

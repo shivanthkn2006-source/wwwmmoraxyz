@@ -1,5 +1,11 @@
 # M'Mora Village roadmap
 
+## Oct 25 public launch and accessibility recheck
+- [ ] Reconcile all 20 screenshot items and recover missing version 7 information in a new Files report.
+- [ ] Classify all image descriptions and fix confirmed accessibility issues without altering sign-in handlers.
+- [ ] Verify keyboard/accessibility trees, desktop/mobile public pages and signed-in navigation under controlled failures.
+- [ ] Separate observed route coverage from device, provider, privacy-isolation and country/legal blockers.
+
 ## Oct 24 Google explanation and controlled VR outage checks
 - [x] Add concise basic-profile/password/Google-notice explanation beside Google sign-in without changing its handler.
 - [x] Reproduce shared map 503 with controlled mocks; three new fallback/cooldown/recovery regressions plus three existing map regressions pass.

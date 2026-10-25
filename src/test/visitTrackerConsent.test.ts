@@ -30,9 +30,7 @@ beforeEach(() => {
 
 describe('visit tracker consent gating', () => {
   it('sends no visit measurement while consent is undecided in a consent region', async () => {
-    // Region unresolved (pending resolution counts as not-yet-decided only after
-    // resolveRegion marks a consent region; here we simulate the decided-denied state).
-    setConsent('denied');
+    // No saved choice and region still pending: startup must fail closed.
     startVisitTracker();
     await new Promise((r) => setTimeout(r, 20));
     trackActivity('vr_enter', 'Entered VR World');
