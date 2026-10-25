@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ id: 'v1' }) }));
+const fetchMock = vi.fn(async (_url: unknown, _init?: RequestInit) => ({ ok: true, json: async () => ({ id: 'v1' }) }));
 vi.stubGlobal('fetch', fetchMock);
 
 vi.mock('@/integrations/supabase/client', () => ({
