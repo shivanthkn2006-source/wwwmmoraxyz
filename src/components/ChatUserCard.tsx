@@ -42,7 +42,7 @@ const ChatUserCard: React.FC<ChatUserCardProps> = ({ user, onClick }) => {
     <Card
       className="relative p-3 md:p-4 chat-warm-surface border-0 shadow-none rounded-none"
     >
-      <Button variant="ghost" className="absolute inset-0 h-full w-full rounded-none" aria-label={`Open conversation with ${user.display_name}`} onClick={() => onClick(user.user_id)} />
+      <Button variant="ghost" className="absolute inset-0 h-full w-full rounded-none hover:bg-foreground/5" aria-label={`Open conversation with ${user.display_name}`} onClick={() => onClick(user.user_id)} />
       <div className="pointer-events-none relative z-10 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="relative">
