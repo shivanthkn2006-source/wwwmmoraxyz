@@ -27,10 +27,30 @@ export const ROUTE_SEO_LIST: RouteSeoEntry[] = [
   },
   {
     path: "/about",
-    title: "About Universe of Life — MMora",
+    title: "About M'Mora — Zoe, DHF and Community",
     description:
-      "Learn about Universe of Life, the team behind MMora and Zoe, our mission, contact details and platform principles.",
+      "Explore M'Mora's social posts, Zoe assistant, DHF Compass, growth, private memories and virtual worlds; read help, terms and privacy information.",
     source: "src/pages/AboutPage.tsx",
+  },
+  {
+    path: '/help', title: "Help and FAQ — M'Mora, Zoe and DHF",
+    description: "Find M'Mora guides and answers about Zoe, DHF Compass, posts, sign-in, privacy controls and early-access country availability.",
+    source: 'src/pages/HelpPage.tsx',
+  },
+  {
+    path: '/terms', title: "Terms of Service — M'Mora",
+    description: "Read M'Mora's early-access terms for accounts, shared content, Zoe, DHF reflection, music, virtual worlds and acceptable use.",
+    source: 'src/pages/TermsPage.tsx',
+  },
+  {
+    path: '/data-policy', title: "Privacy and Data Policy — M'Mora",
+    description: "Read how M'Mora handles account details, Zoe conversations, DHF birth details, media and measurement choices, plus controls and open policy questions.",
+    source: 'src/pages/DataPolicyPage.tsx',
+  },
+  {
+    path: '/map', title: "Site Map — M'Mora Features and Menus",
+    description: "Find M'Mora's member pages for Zoe, DHF, community, creativity, growth, private memories and settings, with links to help and policies.",
+    source: 'src/pages/SiteMapPage.tsx',
   },
   {
     path: "/auth",

@@ -2,6 +2,9 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { siteMapByArea, type AccessTier } from '@/config/siteMap';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
+import PublicInfoFooter from '@/components/legal/PublicInfoFooter';
 
 const TIER_LABEL: Record<AccessTier, string> = {
   public: 'open',
@@ -24,20 +27,11 @@ const AREA_BLURB: Record<string, string> = {
 
 export default function SiteMapPage() {
   const isAdmin = useIsAdmin();
-  // Members see the staff area too, greyed out and not clickable, so the map is
-  // an honest picture of the platform rather than a partial one.
-  const groups = siteMapByArea(true).filter((g) => g.area !== 'Internal' || isAdmin === true);
+  const groups = siteMapByArea(isAdmin === true);
 
   return (
     <main className="min-h-screen bg-background text-foreground px-5 py-10">
-      <Helmet>
-        <title>Site map | M'Mora</title>
-        <meta
-          name="description"
-          content="Every page in M'Mora, grouped into areas with a plain-language explanation of what each one is for."
-        />
-        <link rel="canonical" href="/map" />
-      </Helmet>
+      <PageSeo title={ROUTE_SEO['/map'].title} description={ROUTE_SEO['/map'].description} path="/map" />
 
       <div className="mx-auto w-full max-w-3xl space-y-10">
         <header className="space-y-2 border-b border-border pb-6">
@@ -95,6 +89,7 @@ export default function SiteMapPage() {
             </ul>
           </section>
         ))}
+        <PublicInfoFooter />
       </div>
     </main>
   );

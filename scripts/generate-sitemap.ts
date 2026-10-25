@@ -16,6 +16,10 @@ export interface SitemapEntry {
 export const entries: SitemapEntry[] = [
   { path: "/", changefreq: "daily", priority: "1.0" },
   { path: "/about", changefreq: "monthly", priority: "0.8" },
+  { path: "/help", changefreq: "monthly", priority: "0.6" },
+  { path: "/terms", changefreq: "monthly", priority: "0.5" },
+  { path: "/data-policy", changefreq: "monthly", priority: "0.5" },
+  { path: "/map", changefreq: "monthly", priority: "0.5" },
   { path: "/auth", changefreq: "monthly", priority: "0.5" },
   { path: "/zoe-infinity", changefreq: "weekly", priority: "0.9" },
   { path: "/genesis-imprint", changefreq: "monthly", priority: "0.6" },

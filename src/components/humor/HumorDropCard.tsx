@@ -195,9 +195,9 @@ export const HumorDropCard: React.FC<{ drop: HumorDrop }> = ({ drop }) => {
         </header>
         {stamp && <time dateTime={when.toISOString()} className="mt-1 text-[11px] text-white/70">{stamp}</time>}
         <div className="mt-auto pt-24">
-          <h3 className="mb-3 break-words text-2xl font-extrabold leading-tight tracking-tight text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+          <h2 className="mb-3 break-words text-2xl font-extrabold leading-tight tracking-tight text-white" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
             {drop.headline}
-          </h3>
+          </h2>
           <ul className="space-y-2">
             {drop.lines.map((line, i) => (
               <li
