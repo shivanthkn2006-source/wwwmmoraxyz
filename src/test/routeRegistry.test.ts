@@ -82,9 +82,18 @@ describe('dock ↔ registry consistency', () => {
 
     for (const route of NAVIGABLE_ROUTES) {
       if (DOCK_RESERVED_ROUTES.includes(route.path) || excluded.has(route.path)) continue;
+      if (route.path.startsWith('/__')) continue; // dev harnesses never appear in the menu
       if (excludedPrefixes.some((prefix) => route.path === prefix || route.path.startsWith(`${prefix}/`))) continue;
       if (authoredPaths.has(route.path)) continue;
       expect(itemLabels.has(route.label), `${route.path} missing from Home menu`).toBe(true);
+    }
+  });
+
+  it('keeps dev harness routes out of the Home menu for everyone', () => {
+    for (const isAdmin of [false, true]) {
+      const items = buildExtraDockItems(() => {}, DOCK_RESERVED_ROUTES, Infinity, { isAdmin });
+      const ids = items.map((item) => item.id);
+      expect(ids.some((id) => id.includes('vr-harness') || id.includes('__'))).toBe(false);
     }
   });
 
