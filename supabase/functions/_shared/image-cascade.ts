@@ -114,10 +114,12 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
       if (!acct || !token) return 'not configured';
       const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/ai/run/@cf/black-forest-labs/flux-1-schnell`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 2000), steps: 4 }), redirect: 'manual', signal: o.signal }).catch(() => null);
       if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
-      const b64 = (await readJsonBounded<{ result?: { image?: string } }>(res))?.result?.image;
+      // The JSON wrapper must be able to carry one full-budget base64 image.
+      const maxB64 = Math.ceil(CASCADE_IMAGE_MAX_BYTES / 3) * 4;
+      const b64 = (await readJsonBounded<{ result?: { image?: string } }>(res, maxB64 + 4096))?.result?.image;
       if (!b64) return 'no image';
       // base64 inflates ~4/3: refuse before decoding past the image budget.
-      if (b64.length > Math.ceil(CASCADE_IMAGE_MAX_BYTES / 3) * 4) return 'image too large';
+      if (b64.length > maxB64) return 'image too large';
       return { bytes: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), type: 'image/jpeg' };
     }
     case 'deepai': {
