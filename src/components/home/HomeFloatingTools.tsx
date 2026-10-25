@@ -818,7 +818,7 @@ export default function HomeFloatingTools({ query, onQueryChange, onOpenEditor, 
                         {item.image && (
                           <img
                             src={item.image}
-                            alt=""
+                            alt={item.title || 'Search result image'}
                             loading="lazy"
                             className="mb-2 max-h-48 w-full rounded-lg object-cover"
                           />

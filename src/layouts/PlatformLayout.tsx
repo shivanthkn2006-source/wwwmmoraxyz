@@ -65,7 +65,7 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
   const [extrasReady, setExtrasReady] = useState(false);
   // These existing pages have no own main; keep one landmark without nesting
   // the many other routes that already provide their own.
-  const page = ['/', '/home', '/profile', '/security', '/growth-insights', '/chat'].includes(pathname)
+  const page = ['/home', '/profile', '/security', '/growth-insights', '/chat'].includes(pathname)
     ? <main>{children}</main>
     : children;
   const isAuthenticationRoute =

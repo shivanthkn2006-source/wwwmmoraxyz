@@ -103,7 +103,7 @@ export default function HomeCollectionSheet({ mode, onOpenChange }: HomeCollecti
               className="flex w-full items-center gap-3 rounded-xl border border-border/50 p-2 text-left hover:bg-muted/60"
             >
               {item.media_url && item.media_type !== 'video' ? (
-                <img src={item.media_url} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-cover" />
+                <img src={item.media_url} alt="Saved post image" loading="lazy" className="h-12 w-12 shrink-0 rounded-md object-cover" />
               ) : (
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] uppercase text-muted-foreground">
                   {item.media_type ?? 'post'}
