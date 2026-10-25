@@ -112,26 +112,28 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
     case 'cloudflare': {
       const acct = Deno.env.get('CLOUDFLARE_ACCOUNT_ID'); const token = Deno.env.get('CLOUDFLARE_AI_TOKEN');
       if (!acct || !token) return 'not configured';
-      const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/ai/run/@cf/black-forest-labs/flux-1-schnell`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 2000), steps: 4 }) }).catch(() => null);
+      const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/ai/run/@cf/black-forest-labs/flux-1-schnell`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 2000), steps: 4 }), redirect: 'manual', signal: o.signal }).catch(() => null);
       if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
-      const b64 = (await res.json().catch(() => null) as { result?: { image?: string } } | null)?.result?.image;
+      const b64 = (await readJsonBounded<{ result?: { image?: string } }>(res))?.result?.image;
       if (!b64) return 'no image';
+      // base64 inflates ~4/3: refuse before decoding past the image budget.
+      if (b64.length > Math.ceil(CASCADE_IMAGE_MAX_BYTES / 3) * 4) return 'image too large';
       return { bytes: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), type: 'image/jpeg' };
     }
     case 'deepai': {
       const key = Deno.env.get('DEEPAI_API_KEY'); if (!key) return 'not configured';
       const form = new FormData(); form.append('text', o.prompt.slice(0, 1000));
-      const res = await fetch('https://api.deepai.org/api/text2img', { method: 'POST', headers: { 'api-key': key }, body: form, redirect: 'manual' }).catch(() => null);
+      const res = await fetch('https://api.deepai.org/api/text2img', { method: 'POST', headers: { 'api-key': key }, body: form, redirect: 'manual', signal: o.signal }).catch(() => null);
       if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
-      const data = await res.json().catch(() => null) as { output_url?: unknown } | null;
+      const data = await readJsonBounded<{ output_url?: unknown }>(res);
       const url = deepaiImageUrl(data?.output_url);
       return url ? getImage(url, {}, 1024, 'manual') : 'unsupported image destination';
     }
     case 'pixazo': {
       const key = Deno.env.get('PIXAZO_API_KEY'); if (!key) return 'not configured';
-      const res = await fetch('https://gateway.pixazo.ai/flux-1-schnell/v1/getData', { method: 'POST', headers: { 'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 1000), num_steps: 4, seed: n % 100000, height: 1024, width: 1024 }), redirect: 'manual' }).catch(() => null);
+      const res = await fetch('https://gateway.pixazo.ai/flux-1-schnell/v1/getData', { method: 'POST', headers: { 'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }, body: JSON.stringify({ prompt: o.prompt.slice(0, 1000), num_steps: 4, seed: n % 100000, height: 1024, width: 1024 }), redirect: 'manual', signal: o.signal }).catch(() => null);
       if (!res?.ok) { await res?.body?.cancel(); return `http ${res?.status ?? 'error'}`; }
-      const d = await res.json().catch(() => null) as { output?: string; imageUrl?: string; url?: string } | null;
+      const d = await readJsonBounded<{ output?: string; imageUrl?: string; url?: string }>(res);
       const url = d?.output || d?.imageUrl || d?.url;
       return url ? getImage(url, {}, 1024, o.redirect) : 'no image';
     }
@@ -139,11 +141,11 @@ async function runProvider(p: CascadeProvider, o: Required<Pick<CascadeOptions, 
       if (!o.keywords.length) return 'no keywords';
       // Try the full keyword set, then each keyword alone; 404 = no match.
       for (const q of [o.keywords.join(', '), ...o.keywords]) {
-        const res = await fetch(`https://kaleidoimages.ai/search?q=${encodeURIComponent(q)}&limit=5`).catch(() => null);
+        const res = await fetch(`https://kaleidoimages.ai/search?q=${encodeURIComponent(q)}&limit=5`, { redirect: 'manual', signal: o.signal }).catch(() => null);
         if (!res?.ok) { await res?.body?.cancel(); continue; }
-        const data = await res.json().catch(() => null) as { results?: { url: string; relevance?: number }[] } | null;
-        const best = (data?.results ?? []).filter((r) => (r.relevance ?? 0) >= 3);
-        if (best.length) return getImage(`https://kaleidoimages.ai${best[n % best.length].url}`, {}, 1024, o.redirect);
+        const data = await readJsonBounded<{ results?: { url: string; relevance?: number }[] }>(res);
+        const best = (data?.results ?? []).filter((r) => (r.relevance ?? 0) >= 3 && kaleidoImagePath(r.url));
+        if (best.length) return getImage(`https://kaleidoimages.ai${kaleidoImagePath(best[n % best.length].url)}`, {}, 1024, o.redirect, fetch, o.signal);
       }
       return 'no keyword match';
     }
