@@ -2,16 +2,87 @@
 export const CASCADE_IMAGE_MAX_BYTES = 6 * 1024 * 1024;
 export const CASCADE_IMAGE_TIMEOUT_MS = 45_000;
 
+/** Budgets for provider JSON/text API responses (separate from image bodies). */
+export const CASCADE_JSON_MAX_BYTES = 1024 * 1024;
+export const CASCADE_JSON_TIMEOUT_MS = 30_000;
+
+/**
+ * Stream-counted body read with a combined header/body deadline. Returns null
+ * on oversize, timeout or read failure so callers fall over to the next
+ * provider instead of allocating an unbounded body.
+ */
+export async function readBytesBounded(
+  res: Response,
+  maxBytes: number,
+  timeoutMs = CASCADE_JSON_TIMEOUT_MS,
+): Promise<Uint8Array | null> {
+  const length = res.headers.get('content-length');
+  if (length && /^\d+$/.test(length) && Number(length) > maxBytes) {
+    void res.body?.cancel().catch(() => {});
+    return null;
+  }
+  if (!res.body) return null;
+  const controller = new AbortController();
+  const reader = res.body.getReader();
+  const timer = setTimeout(() => { controller.abort(); void reader.cancel().catch(() => {}); }, timeoutMs);
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (controller.signal.aborted) return null;
+      if (done) break;
+      if (value.byteLength > maxBytes - total) { controller.abort(); void reader.cancel().catch(() => {}); return null; }
+      total += value.byteLength;
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes;
+}
+
+/** Bounded text read over readBytesBounded. */
+export async function readTextBounded(
+  res: Response,
+  maxBytes: number,
+  timeoutMs = CASCADE_JSON_TIMEOUT_MS,
+): Promise<string | null> {
+  const bytes = await readBytesBounded(res, maxBytes, timeoutMs);
+  return bytes === null ? null : new TextDecoder().decode(bytes);
+}
+
+/** Bounded JSON.parse over readTextBounded; null on any failure. */
+export async function readJsonBounded<T = unknown>(
+  res: Response,
+  maxBytes = CASCADE_JSON_MAX_BYTES,
+): Promise<T | null> {
+  const text = await readTextBounded(res, maxBytes);
+  if (text === null) return null;
+  try { return JSON.parse(text) as T; } catch { return null; }
+}
+
 export async function downloadCascadeImage(
   url: string,
   headers: Record<string, string> = {},
   minBytes = 1024,
   redirect: RequestRedirect = 'follow',
   fetcher: typeof fetch = fetch,
+  outerSignal?: AbortSignal,
 ): Promise<{ bytes: Uint8Array; type: string } | string> {
   const controller = new AbortController();
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   const cancel = () => { void reader?.cancel().catch(() => {}); };
+  if (outerSignal) {
+    if (outerSignal.aborted) return 'aborted';
+    outerSignal.addEventListener('abort', () => { controller.abort(); cancel(); }, { once: true });
+  }
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {

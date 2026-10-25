@@ -274,3 +274,9 @@
 - [x] Playwright: banner on /auth, customize, reject → 0 track-visit calls, accept → 3, cookie settings reopen, FAQ renders; zero page errors
 - [x] Global launch checklist restored and updated through v10 in Files.
 - [x] Image count corrected by later AST review: 106 JSX images, zero missing alt, 18 empty alternatives; bounded accessibility repairs and tests recorded in v9. Full-feature/screen-reader/device closure remains open above.
+
+## 2026-10-25 — cascade API budgets + dock/edit fixes (done)
+- [x] Bounded provider JSON/text reads (1 MiB/30s), Cloudflare inline-image cap, Kaleido root-relative path validation, abort-signal cascade stop; 12 new tests; 84 functions deployed
+- [x] Fixed edit-image payload field (imageBase64) in PremiumImageGeneration + Webdrop
+- [x] Home dock: dev harnesses excluded, 5-column phone layout (verified 390px, 5 cols, 279px panel, no errors)
+- [x] Full suite 1,682 passed / 0 failed / 6 skipped (hosted RLS still needs isolated backend)

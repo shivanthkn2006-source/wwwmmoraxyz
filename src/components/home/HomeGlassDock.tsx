@@ -369,7 +369,7 @@ export default function HomeGlassDock({ items = [], className, badgesUpdatedAt, 
   }, [gridSlots, searchQuery]);
 
   const renderPackedRows = () => (
-      <div data-home-dock-grid className="grid h-[calc(4*var(--home-dock-cell)+3*var(--home-dock-gap))] grid-cols-7 content-start gap-[var(--home-dock-gap)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div data-home-dock-grid className="grid h-[calc(4*var(--home-dock-cell)+3*var(--home-dock-gap))] grid-cols-5 md:grid-cols-7 content-start gap-[var(--home-dock-gap)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {visibleGridSlots.map((item) => renderIconButton(item))}
     </div>
   );
