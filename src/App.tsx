@@ -18,6 +18,7 @@ const HumorAnnouncementHost = lazy(() => import('@/components/humor/HumorAnnounc
 const ZoeDeviceScanHost = lazy(() => import('@/features/zoe-device-scan/ZoeDeviceScanHost'));
 const ZoeVisionJournalHost = lazy(() => import('@/features/zoe-vision-journal/ZoeVisionJournalHost'));
 const LightActivityTracker = lazy(() => import('@/components/LightActivityTracker'));
+const ConsentBanner = lazy(() => import('@/components/ConsentBanner'));
 const MemoryLeakPlumberGlobal = lazy(() => import('@/components/MemoryLeakPlumberGlobal'));
 import { AutoFixProvider } from '@/components/AutoFixProvider';
 import { AdaptiveLearningProvider } from '@/components/AdaptiveLearningProvider';
@@ -1523,6 +1524,9 @@ const App = () => {
                             can stay on the home feed and never cover other pages. */}
                         <Suspense fallback={null}>
                           <MoraZoeGlobalHost />
+                        </Suspense>
+                        <Suspense fallback={null}>
+                          <ConsentBanner />
                         </Suspense>
                         <AfterAuthIdle delayMs={2500} pauseInVR>
                           <HumorAnnouncementHost />

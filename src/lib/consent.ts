@@ -133,3 +133,10 @@ export function __resetConsentForTests(): void {
   regionCode = 'XX';
   try { localStorage.removeItem(STORE_KEY); } catch { /* ignore */ }
 }
+
+// Test-only simulated reload: drop in-memory state but keep stored choice.
+export function __reloadConsentForTests(): void {
+  record = null;
+  regionState = 'pending';
+  regionCode = 'XX';
+}

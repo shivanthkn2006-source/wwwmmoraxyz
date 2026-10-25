@@ -242,3 +242,12 @@
 ## Oct 22 #4 continued — edit-image reference download
 - [x] Restricted member-supplied reference URL to own storage + Google avatars; 18 tests; 1,225 pass / 6 skipped; deployed. Live edit not run (paid).
 - [ ] Remaining #4: web-reader DNS boundary, cascade provider-returned URLs, Ironclad relay pinning, crawler origin, size/time caps.
+
+## Oct 25 — Launch checklist: FAQ + cookie consent (Marc)
+- [x] FAQ section on Help page: 10 verified answers, 3 flagged for Marc's confirmation (paid tier, country list, app-store links)
+- [x] Cookie consent: consent.ts (region lookup via /cdn-cgi/trace, fail-closed, deny-by-default in EU/EEA/UK/CH/BR), ConsentBanner (Accept/Reject/Customize, reopens via Cookie settings), visitTracker gated on consent (no replay, immediate stop on refusal, sign-in records stay essential)
+- [x] Data Policy: "Cookies and measurement consent" section + Cookie settings button
+- [x] 15 new tests (consent + tracker gating); full suite 1,641 passed / 6 skipped; build OK
+- [x] Playwright: banner on /auth, customize, reject → 0 track-visit calls, accept → 3, cookie settings reopen, FAQ renders; zero page errors
+- [ ] Update global launch checklist doc (blocked: /mnt/documents mount unavailable this turn)
+- [ ] Remaining launch items: alt text (69/109 imgs), accessibility audit pass
