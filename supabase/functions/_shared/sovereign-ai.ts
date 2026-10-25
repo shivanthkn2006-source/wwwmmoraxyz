@@ -1,4 +1,5 @@
 import { cascadeFetch } from './image-cascade.ts';
+import { readJsonBounded, readTextBounded } from './cascade-image-download.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN AI SHIM — drop-in replacement for the Lovable AI Gateway

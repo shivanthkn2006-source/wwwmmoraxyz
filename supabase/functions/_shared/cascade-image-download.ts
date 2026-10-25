@@ -7,15 +7,15 @@ export const CASCADE_JSON_MAX_BYTES = 1024 * 1024;
 export const CASCADE_JSON_TIMEOUT_MS = 30_000;
 
 /**
- * Stream-counted text read with a combined header/body deadline. Returns null
+ * Stream-counted body read with a combined header/body deadline. Returns null
  * on oversize, timeout or read failure so callers fall over to the next
  * provider instead of allocating an unbounded body.
  */
-export async function readTextBounded(
+export async function readBytesBounded(
   res: Response,
   maxBytes: number,
   timeoutMs = CASCADE_JSON_TIMEOUT_MS,
-): Promise<string | null> {
+): Promise<Uint8Array | null> {
   const length = res.headers.get('content-length');
   if (length && /^\d+$/.test(length) && Number(length) > maxBytes) {
     void res.body?.cancel().catch(() => {});
@@ -45,7 +45,17 @@ export async function readTextBounded(
   const bytes = new Uint8Array(total);
   let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  return new TextDecoder().decode(bytes);
+  return bytes;
+}
+
+/** Bounded text read over readBytesBounded. */
+export async function readTextBounded(
+  res: Response,
+  maxBytes: number,
+  timeoutMs = CASCADE_JSON_TIMEOUT_MS,
+): Promise<string | null> {
+  const bytes = await readBytesBounded(res, maxBytes, timeoutMs);
+  return bytes === null ? null : new TextDecoder().decode(bytes);
 }
 
 /** Bounded JSON.parse over readTextBounded; null on any failure. */

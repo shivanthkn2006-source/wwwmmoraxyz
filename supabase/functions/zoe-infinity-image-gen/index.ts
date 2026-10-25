@@ -1,4 +1,5 @@
 import { cascadeFetch } from '../_shared/image-cascade.ts';
+import { readBytesBounded, CASCADE_IMAGE_MAX_BYTES } from '../_shared/cascade-image-download.ts';
 import { requireCaller } from '../_shared/caller-guard.ts';
 import { sovereignFetch } from "../_shared/sovereign-ai.ts";
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -22,19 +23,20 @@ function uint8ToBase64(bytes: Uint8Array): string {
 }
 
 async function responseToDataUrl(resp: Response): Promise<string | null> {
-  const buf = await resp.arrayBuffer();
-  if (buf.byteLength < 1000) {
+  // Stream-counted cap: never allocate an unbounded provider body.
+  const bytes = await readBytesBounded(resp, CASCADE_IMAGE_MAX_BYTES);
+  if (!bytes || bytes.byteLength < 1000) {
     return null;
   }
 
   const ct = resp.headers.get('content-type') || 'image/jpeg';
-  const b64 = uint8ToBase64(new Uint8Array(buf));
+  const b64 = uint8ToBase64(bytes);
   return `data:${ct};base64,${b64}`;
 }
 
 async function fetchImageAsDataUrl(url: string): Promise<string | null> {
   try {
-    const resp = await cascadeFetch(url, { headers: { 'Accept': 'image/*' } });
+    const resp = await cascadeFetch(url, { headers: { 'Accept': 'image/*' }, signal: AbortSignal.timeout(30_000) });
     if (!resp.ok) {
       console.warn(`[zoe-image-gen] Remote image fetch returned ${resp.status}`);
       return null;
