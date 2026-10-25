@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  __reloadConsentForTests,
   __resetConsentForTests,
   analyticsAllowed,
   getConsent,
@@ -83,7 +84,7 @@ describe('consent choices', () => {
     setConsent('denied');
     expect(analyticsAllowed()).toBe(false);
     // Survives a reload (fresh module state, same localStorage).
-    __resetConsentForTests();
+    __reloadConsentForTests();
     expect(analyticsAllowed()).toBe(false);
   });
 
@@ -91,7 +92,7 @@ describe('consent choices', () => {
     mockTrace('loc=US\n');
     await resolveRegion();
     setConsent('denied');
-    __resetConsentForTests();
+    __reloadConsentForTests();
     mockTrace('loc=US\n');
     await resolveRegion();
     expect(analyticsAllowed()).toBe(false);

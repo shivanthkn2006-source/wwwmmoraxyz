@@ -56,9 +56,12 @@ describe('visit tracker consent gating', () => {
     await new Promise((r) => setTimeout(r, 20));
     history.pushState({}, '', '/some-page-while-refused');
     await new Promise((r) => setTimeout(r, 20));
+    // Move on before granting, so a granted-state start can only name the new page.
+    history.pushState({}, '', '/after-consent');
     setConsent('granted');
     await new Promise((r) => setTimeout(r, 20));
     const paths = trackingCalls().map(([, init]) => JSON.parse(String((init as RequestInit).body)).path);
     expect(paths).not.toContain('/some-page-while-refused');
+    expect(paths).toContain('/after-consent');
   });
 });
