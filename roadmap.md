@@ -1,8 +1,8 @@
 # M'Mora Village roadmap
 
 ## Oct 25 v9 launch continuation
-- [ ] Bound DHF direct-storage downloads and fallback body consumption; run controlled limits/redirect/storage regressions without external requests or paid jobs.
-- [ ] Refresh all 20 checklist rows and inherited 11 audit groups; supply official-source documentation next steps, separating technical evidence from outside confirmation.
+- [x] Bound DHF direct download headers/body and fallback body consumption; 67 controlled focused passes, full suite 1,657 passed / six skipped, build OK; five runner importers deployed without jobs or writes.
+- [x] Refresh all 20 checklist rows and inherited 11 audit groups in v10; include official-source documentation next steps and eight mocked desktop/mobile public preview states with no blank bodies/page exceptions/overflow.
 - [ ] Outside closure remains: isolated privacy environment, provider contracts, operator/legal decisions, real screen readers/devices and successful hosted critical flows.
 
 ## Oct 25 accessibility follow-up
@@ -28,13 +28,13 @@
 - [x] Explain uploaded Google notice using official guidance; no app-requested Gmail/Drive scopes found. Google notice cannot be rewritten; hosted scopes unverified and separate welcome sender blocked by workspace-admin setup permission. Working authentication unchanged.
 - [x] Bound reference URL download to stream-counted 6 MiB / combined 45-second header/body deadline before inference; reviewed origins/redirects/MIME/provider sequence unchanged. Two image-field caller mismatches separately recorded, not changed.
 - [x] 15 new controlled tests / 52 focused passes; full suite 1,626 passed, zero failed, six skipped; latest build OK. Only edit-image deployed, no internal requests/paid jobs/member writes. Version 5 checklist separates observed proof from unavailable hosted/provider/device/privacy/legal evidence.
-- [ ] Next: DHF direct storage byte limits. Hosted successful editing/error display, inline/API/overall limits and caller mismatches need separate proof/repair; isolated credentials, physical devices, provider contracts and admin sender setup remain blockers.
+- [ ] Next: upstream inline/API/overall limits and caller mismatches; DHF direct storage repaired in v10. Hosted successful editing/storage readback, isolated credentials, physical devices, provider contracts and admin sender setup remain blockers.
 
 ## Oct 24 download budgets and proprietary-security review
 - [x] Trace non-reader budgets/callers; replace cascade URL whole-body allocation with stream-counted 6 MiB ceiling and 45-second combined header/body deadline; provider/auth/redirect behavior unchanged.
 - [x] Map selected client/server security boundaries and staged prevention priorities in MMora_Global_Launch_Checklist_2026-10-24_v4.md; no hidden-client-code or exhaustive security guarantee.
 - [x] 19 new tests, 203 focused passes; full suite 1,611 passed, zero failed, six skipped; latest build OK. All 84 transitive source importers deployed, no handlers/internal requests/paid jobs/member writes.
-- [x] Edit-image URL reference byte/deadline limits repaired in the next stage above; DHF direct storage and API/inline JSON, legacy passthrough/overall budgets remain open with provider/device/isolation/legal evidence unavailable.
+- [x] Edit-image URL reference and DHF direct-storage byte/deadline limits repaired in later stages; API/inline JSON, legacy passthrough/overall budgets remain open with provider/device/isolation/legal evidence unavailable.
 
 ## Oct 24 crawler and future recommendation launch request
 - [x] Trace three crawler callers; restrict configured origin/root-relative routes, refuse redirects and cancel bodies. 63 new tests, 224 focused passes; crawler deployed without jobs.
@@ -267,5 +267,5 @@
 - [x] Data Policy: "Cookies and measurement consent" section + Cookie settings button
 - [x] 15 new tests (consent + tracker gating); full suite 1,641 passed / 6 skipped; build OK
 - [x] Playwright: banner on /auth, customize, reject → 0 track-visit calls, accept → 3, cookie settings reopen, FAQ renders; zero page errors
-- [ ] Update global launch checklist doc (blocked: /mnt/documents mount unavailable this turn)
-- [ ] Remaining launch items: alt text (69/109 imgs), accessibility audit pass
+- [x] Global launch checklist restored and updated through v10 in Files.
+- [x] Image count corrected by later AST review: 106 JSX images, zero missing alt, 18 empty alternatives; bounded accessibility repairs and tests recorded in v9. Full-feature/screen-reader/device closure remains open above.
