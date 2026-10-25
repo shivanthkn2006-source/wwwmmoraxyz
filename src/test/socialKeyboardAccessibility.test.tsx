@@ -31,6 +31,8 @@ describe('social keyboard actions', () => {
   render(<MemoryRouter><ChatUserCard user={{ user_id: 'member-a', display_name: 'Ari', username: 'ari', last_message: { content: 'See you soon', created_at: '2026-10-25' } } as React.ComponentProps<typeof ChatUserCard>['user']} onClick={vi.fn()} /></MemoryRouter>);
   const overlay = screen.getByRole('button', { name: 'Open conversation with Ari' });
   expect(overlay.className).toContain('absolute');
+  expect(overlay.className).toContain('hover:bg-foreground/5');
+  expect(overlay.className).not.toContain('hover:bg-accent ');
   const details = screen.getByText('Ari').closest('div.pointer-events-none');
   expect(details?.className).toContain('relative');
   expect(details?.className).toContain('z-10');
