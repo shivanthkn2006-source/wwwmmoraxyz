@@ -1,5 +1,9 @@
 # M'Mora Village roadmap
 
+## Oct 25 isolated privacy continuation
+- [ ] Trace six live skips and execute actual migration/RLS in memory with mocked identities, no network or paid jobs; repair confirmed test gaps only.
+- [ ] Document local proof separately from hosted Auth/Data API proof; update attached priorities without claiming global closure.
+
 ## Oct 25 v9 launch continuation
 - [x] Bound DHF direct download headers/body and fallback body consumption; 67 controlled focused passes, full suite 1,657 passed / six skipped, build OK; five runner importers deployed without jobs or writes.
 - [x] Refresh all 20 checklist rows and inherited 11 audit groups in v10; include official-source documentation next steps and eight mocked desktop/mobile public preview states with no blank bodies/page exceptions/overflow.
