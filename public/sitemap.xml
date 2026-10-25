@@ -11,6 +11,26 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://www.mmora.xyz/help</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.mmora.xyz/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.mmora.xyz/data-policy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.mmora.xyz/map</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://www.mmora.xyz/auth</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

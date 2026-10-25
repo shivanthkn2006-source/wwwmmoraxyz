@@ -519,7 +519,7 @@ const SelfieCityPage: React.FC = () => {
                 {/* Avatar/Image */}
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted">
                   {selectedPin.imageUrl && (
-                    <img src={selectedPin.imageUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={selectedPin.imageUrl} alt={selectedPin.userName || selectedPin.storeName || 'Selected map location'} className="w-full h-full object-cover" />
                   )}
                 </div>
                 

@@ -19,10 +19,11 @@ const DevTestButton: React.FC = () => {
     <>
       {/* Floating Dev Button - positioned to avoid overlapping auth forms */}
       <Button
+        aria-label="Open development tests"
         variant="outline"
         size="sm"
         onClick={() => setShowTestSuite(true)}
-        className="fixed left-3 top-[calc(50%+2.25rem)] z-40 h-8 gap-1.5 bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 text-amber-400 text-xs opacity-60 hover:opacity-100 transition-opacity"
+        className="fixed left-3 top-[calc(50%+2.25rem)] z-40 min-h-11 gap-1.5 bg-background border-border text-foreground text-xs transition-opacity"
       >
         <Bug className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Dev</span>

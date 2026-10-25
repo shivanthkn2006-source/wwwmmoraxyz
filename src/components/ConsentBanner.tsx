@@ -3,6 +3,7 @@
 // equally prominent; choices apply immediately and never block sign-in.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import {
   analyticsAllowed,
   getConsent,
@@ -51,7 +52,7 @@ export default function ConsentBanner() {
       aria-label="Privacy choices"
       className="fixed inset-x-0 bottom-0 z-[90] px-4 pb-4 sm:px-6 sm:pb-6"
     >
-      <div className="mx-auto w-full max-w-xl rounded-2xl border border-border bg-card p-5 shadow-xl">
+      <div className="surface-warm-tan mx-auto w-full max-w-xl max-h-[85dvh] overflow-y-auto rounded-lg p-5">
         <h2 className="text-base font-semibold text-foreground">Your privacy choices</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           M'Mora uses a small amount of first-party measurement — which pages are visited and for how
@@ -61,7 +62,7 @@ export default function ConsentBanner() {
         </p>
 
         {details && (
-          <div className="mt-3 space-y-2 rounded-xl border border-border bg-muted/40 p-3 text-sm">
+          <div className="mt-3 space-y-2 border-t border-border pt-3 text-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-medium text-foreground">Essential — always on</p>
@@ -86,28 +87,28 @@ export default function ConsentBanner() {
         )}
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
+          <Button variant="ghost"
             type="button"
             onClick={() => choose('granted')}
-            className="flex-1 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+            className="min-h-11 flex-1"
           >
             Accept
-          </button>
-          <button
+          </Button>
+          <Button variant="ghost"
             type="button"
             onClick={() => choose('denied')}
-            className="flex-1 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            className="min-h-11 flex-1"
           >
             Reject
-          </button>
-          <button
+          </Button>
+          <Button variant="ghost"
             type="button"
             onClick={() => setDetails((d) => !d)}
-            className="flex-1 rounded-full px-4 py-2 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            className="min-h-11 flex-1 underline underline-offset-4"
             aria-expanded={details}
           >
             {details ? 'Hide details' : 'Customize'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

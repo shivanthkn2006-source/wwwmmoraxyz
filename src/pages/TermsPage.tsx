@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
 import PublicInfoFooter from '@/components/legal/PublicInfoFooter';
 
 const UPDATED = '25 October 2026';
@@ -7,14 +8,7 @@ const UPDATED = '25 October 2026';
 export default function TermsPage() {
   return (
     <main className="min-h-dvh bg-background text-foreground px-5 py-10">
-      <Helmet>
-        <title>Terms of Service | M'Mora</title>
-        <meta
-          name="description"
-          content="The rules for using M'Mora: membership, invitations, your content, Zoe, acceptable use, and how accounts end."
-        />
-        <link rel="canonical" href="/terms" />
-      </Helmet>
+      <PageSeo title={ROUTE_SEO['/terms'].title} description={ROUTE_SEO['/terms'].description} path="/terms" />
 
       <article className="mx-auto w-full max-w-2xl space-y-8">
         <header className="space-y-2 border-b border-border pb-6">

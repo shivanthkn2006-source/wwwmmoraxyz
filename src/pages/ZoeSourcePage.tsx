@@ -86,7 +86,7 @@ export default function ZoeSourcePage() {
       {payload?.image && (
         <img
           src={payload.image}
-          alt=""
+          alt={payload.title || fallbackTitle || 'Source article image'}
           loading="lazy"
           className="mb-4 max-h-72 w-full rounded-xl object-cover"
         />

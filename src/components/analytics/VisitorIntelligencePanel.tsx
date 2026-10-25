@@ -346,7 +346,7 @@ const SessionCard = ({ session, onSelect, isSelected }: SessionCardProps) => {
             {session.profile_photo_url ? (
               <img
                 src={session.profile_photo_url}
-                alt=""
+                alt="Member profile photo"
                 className="w-8 h-8 rounded-full object-cover"
               />
             ) : (

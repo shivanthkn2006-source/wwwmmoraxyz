@@ -342,7 +342,7 @@ const createUserIcon = (photoUrl?: string, status?: string, isCurrentUser: boole
         }
       </style>
         <div style="position: relative; width: ${iconSize}px; height: ${iconSize}px; border-radius: 50%; overflow: hidden; border: ${borderWidth} solid ${borderColor}; box-shadow: 0 4px 12px rgba(0,0,0,0.4)${extraGlow};">
-        <img src="${photoUrl}" style="width: 100%; height: 100%; object-fit: cover;" />
+        <img src="${photoUrl}" alt="Member profile photo" style="width: 100%; height: 100%; object-fit: cover;" />
         ${statusIndicator}
         ${createNotificationBadgesHTML(notifications)}
       </div>`,

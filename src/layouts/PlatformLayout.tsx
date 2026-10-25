@@ -63,6 +63,11 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
   const { pathname } = useLocation();
   const { user, loading } = useAuth();
   const [extrasReady, setExtrasReady] = useState(false);
+  // These existing pages have no own main; keep one landmark without nesting
+  // the many other routes that already provide their own.
+  const page = ['/home', '/profile', '/security', '/growth-insights', '/chat'].includes(pathname)
+    ? <main>{children}</main>
+    : children;
   const isAuthenticationRoute =
     pathname === '/' ||
     pathname.startsWith('/auth') ||
@@ -83,7 +88,7 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
 
   // Authentication and the requested page own the critical path. The Home
   // control remains immediate; optional voice/call/monitoring systems follow.
-  if (loading || !user || isAuthenticationRoute) return <>{children}</>;
+  if (loading || !user || isAuthenticationRoute) return <>{page}</>;
 
   // The call engine wraps the page itself: the Calls page, call buttons and
   // the deferred incoming-call host all read it, so it cannot wait for the
@@ -91,7 +96,7 @@ export const PlatformLayout = ({ children }: { children: React.ReactNode }) => {
   // CallEngineProvider" on /calls).
   return (
   <CallEngineProvider>
-    <ZoeCardNarrationProvider>{children}</ZoeCardNarrationProvider>
+    <ZoeCardNarrationProvider>{page}</ZoeCardNarrationProvider>
     <AppErrorBoundary moduleName="platform:dock" severity="low" fallback={null}>
       <GlobalHomeDock />
     </AppErrorBoundary>

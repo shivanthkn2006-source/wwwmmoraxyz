@@ -353,7 +353,7 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
                               {result.avatarUrl && (
                                 <img
                                   src={result.avatarUrl}
-                                  alt=""
+                                  alt="Search result preview"
                                   loading="lazy"
                                   className="mb-2 h-24 w-full rounded-xl object-cover"
                                 />
@@ -441,7 +441,7 @@ export const ZoeSearchModal: React.FC<ZoeSearchModalProps> = ({
                                 <span className="relative shrink-0">
                                   <img
                                     src={item.thumbnail || item.image}
-                                    alt=""
+                                    alt={sanitizeText(item.title) || 'Search result preview'}
                                     loading="lazy"
                                     className="h-14 w-20 rounded-xl object-cover"
                                   />

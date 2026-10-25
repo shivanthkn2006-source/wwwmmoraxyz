@@ -6,10 +6,13 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { ActivityTracker } from './ActivityTracker';
+import { analyticsAllowed, onConsentChange } from '@/lib/consent';
 
 export const LightActivityTracker = () => {
   const { user } = useAuth();
   const [shouldTrack, setShouldTrack] = useState(false);
+  const [allowed, setAllowed] = useState(analyticsAllowed);
+  useEffect(() => onConsentChange(() => setAllowed(analyticsAllowed())), []);
 
   useEffect(() => {
     if (!user) {
@@ -27,7 +30,7 @@ export const LightActivityTracker = () => {
   }, [user]);
 
   // Only render ActivityTracker when user is authenticated and after defer
-  if (!shouldTrack) return null;
+  if (!shouldTrack || !allowed) return null;
 
   return <ActivityTracker />;
 };

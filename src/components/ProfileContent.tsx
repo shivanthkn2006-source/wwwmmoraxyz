@@ -417,6 +417,8 @@ const ProfileContent = () => {
           <Button 
             variant="ghost" 
             size="icon"
+            aria-label="Profile settings"
+            onClick={() => navigate('/profile?settings=1')}
             className="text-white hover:bg-white/10"
           >
             <Settings className="w-5 h-5" />
@@ -426,6 +428,7 @@ const ProfileContent = () => {
               <Button 
                 variant="ghost" 
                 size="icon"
+                aria-label="Sign out"
                 className="text-white hover:bg-white/10"
               >
                 <LogOut className="w-5 h-5" />
@@ -492,6 +495,7 @@ const ProfileContent = () => {
                   <Button 
                     variant="ghost"
                     size="icon"
+                    aria-label="Read profile bio"
                     className="bg-white/20 text-white hover:bg-white/30 rounded-full w-10 h-10"
                   >
                     <BookOpen className="w-5 h-5" />

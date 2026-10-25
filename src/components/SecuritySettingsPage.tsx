@@ -223,10 +223,10 @@ const SecuritySettingsPage = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <h2 className="text-2xl font-semibold leading-none flex items-center gap-2">
                   <Smartphone className="w-5 h-5" />
                   Two-Factor Authentication
-                </CardTitle>
+                </h2>
                 <CardDescription>
                   Add an extra layer of security to your account
                 </CardDescription>
@@ -258,10 +258,10 @@ const SecuritySettingsPage = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <h2 className="text-2xl font-semibold leading-none flex items-center gap-2">
                   <Camera className="w-5 h-5" />
                   AI Face Verification
-                </CardTitle>
+                </h2>
                 <CardDescription>
                   Powered by Advanced AI Vision • 99.1% Accuracy
                 </CardDescription>
@@ -305,10 +305,10 @@ const SecuritySettingsPage = () => {
           <CardHeader>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <h2 className="text-2xl font-semibold leading-none flex items-center gap-2">
                   <Fingerprint className="w-5 h-5" />
                   Native Biometrics / Passkeys
-                </CardTitle>
+                </h2>
                 <CardDescription>
                   Face ID, Touch ID, Android fingerprint, and browser passkeys
                 </CardDescription>
@@ -365,10 +365,10 @@ const SecuritySettingsPage = () => {
         {/* Recovery Options */}
         <Card className="bg-card/40 backdrop-blur-xl border-border/50">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <h2 className="text-2xl font-semibold leading-none flex items-center gap-2">
               <Mail className="w-5 h-5" />
               Account Recovery
-            </CardTitle>
+            </h2>
             <CardDescription>
               Configure backup methods to recover your account
             </CardDescription>
@@ -423,10 +423,10 @@ const SecuritySettingsPage = () => {
         {/* Security Audit Log */}
         <Card className="bg-card/40 backdrop-blur-xl border-border/50">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <h2 className="text-2xl font-semibold leading-none flex items-center gap-2">
               <History className="w-5 h-5" />
               Recent Security Activity
-            </CardTitle>
+            </h2>
             <CardDescription>
               Last 10 security-related events
             </CardDescription>

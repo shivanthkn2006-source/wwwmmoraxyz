@@ -78,15 +78,17 @@ const QuantumCameraPage: React.FC = () => {
       {capturedImage && (
         <div className="absolute bottom-24 left-4 z-50 flex items-end gap-2">
           <div className="relative group">
+            <Button variant="ghost" className="h-auto p-0" aria-label="Open captured image" onClick={() => window.open(capturedImage, '_blank', 'noopener,noreferrer')}>
             <img
               src={capturedImage}
               alt="Captured"
             className="w-20 h-20 object-cover rounded-lg border-2 border-primary/50 cursor-pointer hover:scale-105 transition-transform"
-            onClick={() => window.open(capturedImage, '_blank')}
           />
+            </Button>
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-1">
               <Button
                 size="icon"
+                aria-label="Download captured image"
                 variant="ghost"
                 className="w-8 h-8"
                 onClick={handleDownload}
@@ -96,6 +98,7 @@ const QuantumCameraPage: React.FC = () => {
               {navigator.share && (
                 <Button
                   size="icon"
+                  aria-label="Share captured image"
                   variant="ghost"
                   className="w-8 h-8"
                   onClick={handleShare}

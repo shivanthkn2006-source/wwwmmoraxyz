@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import PageSeo from '@/components/seo/PageSeo';
+import { ROUTE_SEO } from '@/config/routeSeo';
 import PublicInfoFooter from '@/components/legal/PublicInfoFooter';
 
 interface Guide {
@@ -111,7 +112,7 @@ const FAQ: FaqItem[] = [
   },
   {
     q: 'Is M\u2019Mora available in my country?',
-    a: 'M'Mora is in early access. Measurement consent adapts to detected region, but this does not establish legal availability in every country. A confirmed country-by-country launch list and eligibility rules are still needed before global launch.',
+    a: "M'Mora is in early access. Measurement consent adapts to detected region, but this does not establish legal availability in every country. A confirmed country-by-country launch list and eligibility rules are still needed before global launch.",
   },
   {
     q: 'How do I report a problem or a person?',
@@ -126,14 +127,7 @@ const FAQ: FaqItem[] = [
 export default function HelpPage() {
   return (
     <main className="min-h-screen bg-background text-foreground px-5 py-10">
-      <Helmet>
-        <title>Help and guides | M'Mora</title>
-        <meta
-          name="description"
-          content="Short plain-language guides to M'Mora: your first day, how Zoe helps, posting, your vault, and your privacy."
-        />
-        <link rel="canonical" href="/help" />
-      </Helmet>
+      <PageSeo title={ROUTE_SEO['/help'].title} description={ROUTE_SEO['/help'].description} path="/help" />
 
       <div className="mx-auto w-full max-w-2xl space-y-10">
         <header className="space-y-2 border-b border-border pb-6">

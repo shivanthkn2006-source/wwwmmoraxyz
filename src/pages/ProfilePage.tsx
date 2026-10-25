@@ -155,6 +155,7 @@ const ProfilePage = () => {
 
   return (
     <div className="profile-liquid-page min-h-screen pb-20" data-profile-liquid-page>
+      <h1 className="sr-only">Profile</h1>
       <div className="mx-auto w-full" data-profile-liquid-content>
         {/* Top Header with Settings Search & Actions */}
         <div className="profile-liquid-header sticky top-0 z-50 border-b backdrop-blur-xl">
@@ -227,7 +228,7 @@ const ProfilePage = () => {
 
             <Sheet open={showSettings} onOpenChange={setShowSettings}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label="Voice settings">
                   <Settings className="w-4 h-4" />
                 </Button>
               </SheetTrigger>
@@ -245,7 +246,7 @@ const ProfilePage = () => {
             </Sheet>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" aria-label="Sign out">
                   <LogOut className="w-4 h-4" />
                 </Button>
               </AlertDialogTrigger>
