@@ -1777,17 +1777,22 @@ body.profile-liquid-active :is([role='dialog'], [role='menu'], [role='listbox'])
 }
 
 @media (max-width: 48rem) {
+  /* Phones use five wider columns: bigger touch targets and readable labels
+     instead of seven cramped ones. */
   .home-dock-root {
     --home-dock-cell: clamp(
-      1.875rem,
+      2.5rem,
       min(
-        calc((100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 2 * var(--home-dock-pad) - 6 * var(--home-dock-gap)) / 7),
+        calc((100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 2 * var(--home-dock-pad) - 4 * var(--home-dock-gap)) / 5),
         calc((100dvh - 4.75rem) / 5)
       ),
       3.25rem
     );
     left: env(safe-area-inset-left, 0px);
     right: env(safe-area-inset-right, 0px);
+  }
+  .home-dock-root [data-home-dock-grid] {
+    width: calc((5 * var(--home-dock-cell)) + (4 * var(--home-dock-gap)));
   }
 }
 
