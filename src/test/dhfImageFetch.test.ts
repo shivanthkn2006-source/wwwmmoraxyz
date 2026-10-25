@@ -5,6 +5,7 @@ import ts from 'typescript';
 import { dhfImageUrl, fetchDhfImage, UnsafeDhfImageUrl } from '../../supabase/functions/_shared/dhf-image-fetch';
 import { buildDhfImageBrief } from '../../supabase/functions/_shared/dhf-compass-image';
 import { fetchImageCascade } from '../../supabase/functions/_shared/image-cascade';
+import { downloadCascadeImage } from '../../supabase/functions/_shared/cascade-image-download';
 
 const supported = 'https://image.pollinations.ai/prompt/garden?width=1200&height=800&seed=5';
 
@@ -16,7 +17,7 @@ function storageFixture(download: typeof fetchDhfImage) {
   const start = source.indexOf('export async function storeImage(');
   const end = source.indexOf('export interface RunOptions', start);
   if (start < 0 || end < 0) throw new Error('Storage function missing');
-  const context = { dhfImageUrl, fetchDhfImage: download, UnsafeDhfImageUrl, cascadeFetch: cascade,
+  const context = { dhfImageUrl, fetchDhfImage: download, UnsafeDhfImageUrl, cascadeFetch: cascade, downloadCascadeImage,
     fetch: network, SUPABASE_URL: 'https://storage.fixture.test', SERVICE_KEY: 'fixture', COMPASS_BUCKET: 'dhf-compass',
     Uint8Array, Response, AbortSignal };
   const compiled = ts.transpileModule(source.slice(start, end).replace('export async', 'async'), {
@@ -54,7 +55,7 @@ describe('DHF storage destination boundary', () => {
     const url = buildDhfImageBrief({ category: 'Daily Compass', headline: 'Quiet garden', shortSummary: 'Peace',
       fullStory: 'A person tends flowers in the garden.', astrologicalContext: 'moon', seed: 5 }).url;
     expect(dhfImageUrl(url)).toBe(url);
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(new Uint8Array([1, 2, 3])));
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'image/jpeg' } }));
     const response = await fetchDhfImage(url, fetcher);
     expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([1, 2, 3]);
     expect(fetcher).toHaveBeenCalledWith(url, expect.objectContaining({ redirect: 'manual', signal: expect.any(AbortSignal) }));

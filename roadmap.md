@@ -1,5 +1,10 @@
 # M'Mora Village roadmap
 
+## Oct 25 v9 launch continuation
+- [ ] Bound DHF direct-storage downloads and fallback body consumption; run controlled limits/redirect/storage regressions without external requests or paid jobs.
+- [ ] Refresh all 20 checklist rows and inherited 11 audit groups; supply official-source documentation next steps, separating technical evidence from outside confirmation.
+- [ ] Outside closure remains: isolated privacy environment, provider contracts, operator/legal decisions, real screen readers/devices and successful hosted critical flows.
+
 ## Oct 25 accessibility follow-up
 - [x] Repair confirmed keyboard gaps in social cards, comments, image viewer, post grid and attachment navigation.
 - [x] Recheck 24 desktop/mobile pre-repair views and isolated updated-source keyboard/focus checks; full suite 1,646 passed, six skipped; all 20 rows refreshed in v9.
