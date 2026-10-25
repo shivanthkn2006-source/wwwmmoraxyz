@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface Post {
   id: string;
@@ -23,9 +23,11 @@ const PostsGrid: React.FC<PostsGridProps> = ({ posts, onPostClick }) => {
   return (
     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 p-1">
       {posts.map((post) => (
-        <div
+        <Button
+          variant="ghost"
+          aria-label={`Open post ${post.content?.slice(0, 80) || post.id}`}
           key={post.id}
-          className="aspect-square cursor-pointer hover:opacity-80 transition-opacity overflow-hidden bg-muted"
+          className="h-auto w-full aspect-square rounded-none p-0 hover:opacity-80 transition-opacity overflow-hidden bg-muted"
           onClick={() => onPostClick(post)}
         >
           {post.media_url && (post.media_type === 'image' || post.media_url.startsWith('data:image/')) ? (
@@ -47,7 +49,7 @@ const PostsGrid: React.FC<PostsGridProps> = ({ posts, onPostClick }) => {
               </p>
             </div>
           )}
-        </div>
+        </Button>
       ))}
     </div>
   );

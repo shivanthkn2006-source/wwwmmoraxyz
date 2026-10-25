@@ -49,7 +49,7 @@ export default function PostAttachmentGallery({ attachments, onVideoCompleted }:
 
   return (
     <>
-      <div className="relative h-full w-full overflow-hidden bg-black" data-testid="post-attachment-gallery">
+      <div className="relative h-full w-full overflow-hidden bg-background" data-testid="post-attachment-gallery">
         <div ref={emblaRef} className="h-full w-full overflow-hidden">
           <div className="flex h-full w-full">
             {attachments.map((attachment, index) => (
@@ -61,9 +61,10 @@ export default function PostAttachmentGallery({ attachments, onVideoCompleted }:
                 className="relative h-full w-full min-w-0 shrink-0 grow-0 basis-full"
               >
                 {attachment.media_type === 'image' ? (
-                  <button
+                  <Button
+                    variant="ghost"
                     type="button"
-                    className="absolute inset-0 flex h-full w-full items-center justify-center"
+                    className="absolute inset-0 flex h-full w-full items-center justify-center rounded-none p-0"
                     onClick={() => setOpenImage(attachment)}
                     aria-label={`Open ${attachment.file_name}`}
                   >
@@ -73,7 +74,7 @@ export default function PostAttachmentGallery({ attachments, onVideoCompleted }:
                       loading="lazy"
                       className="h-full w-full object-contain"
                     />
-                  </button>
+                  </Button>
                 ) : attachment.media_type === 'video' ? (
                   <div className="absolute inset-0 flex h-full w-full items-center justify-center">
                     <video
@@ -114,22 +115,24 @@ export default function PostAttachmentGallery({ attachments, onVideoCompleted }:
           <div className="absolute inset-x-0 bottom-3 z-20 flex justify-center">
             <div
               className="flex items-center gap-1.5 rounded-full bg-background/60 px-2.5 py-1.5 backdrop-blur"
-              role="tablist"
+              role="group"
               aria-label={`Attachment ${selected + 1} of ${attachments.length}`}
             >
               {attachments.map((attachment, index) => (
-                <button
+                <Button
+                  variant="ghost"
                   key={attachment.id}
                   type="button"
-                  role="tab"
-                  aria-selected={index === selected}
+                  aria-pressed={index === selected}
                   aria-label={`Go to file ${index + 1}`}
                   onClick={() => scrollTo(index)}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all',
+                  className="h-11 w-11 p-0 rounded-full"
+                >
+                  <span aria-hidden="true" className={cn(
+                    'block h-1.5 rounded-full transition-all',
                     index === selected ? 'w-5 bg-foreground' : 'w-1.5 bg-foreground/40',
-                  )}
-                />
+                  )} />
+                </Button>
               ))}
             </div>
           </div>

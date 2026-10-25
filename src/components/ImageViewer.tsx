@@ -1,6 +1,7 @@
 import React from 'react';
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import * as Dialog from '@radix-ui/react-dialog';
 
 interface ImageViewerProps {
   imageUrl: string;
@@ -31,16 +32,23 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ imageUrl, onClose, alt = 'Ful
     }
   };
 
+  // Conditional viewers have no Radix Trigger; remember their actual opener.
+  const opener = React.useRef<HTMLElement | null>(
+    typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+      ? document.activeElement : null,
+  );
+
   return (
-    <div 
-      className="fixed inset-0 z-[12000] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog.Portal>
+    <Dialog.Overlay className="fixed inset-0 z-[12000] bg-background/95 backdrop-blur-sm" />
+    <Dialog.Content aria-describedby={undefined} className="fixed inset-0 z-[12001] flex items-center justify-center p-4 focus:outline-none" onClick={onClose} onCloseAutoFocus={(event) => { event.preventDefault(); if (opener.current?.isConnected) opener.current.focus(); }}>
+      <Dialog.Title className="sr-only">{alt}</Dialog.Title>
       <div className="absolute top-4 right-4 z-10 flex gap-2">
-        <Button variant={plainButtons ? "ghost" : "secondary"} size="icon" className={plainButtons ? "bg-transparent hover:bg-transparent text-white hover:text-white border-0 shadow-none" : undefined} onClick={(event) => { event.stopPropagation(); void downloadImage(); }} aria-label="Download full-size image">
+        <Button variant={plainButtons ? "ghost" : "secondary"} size="icon" className="min-h-11 min-w-11" onClick={(event) => { event.stopPropagation(); void downloadImage(); }} aria-label="Download full-size image">
           <Download className="w-5 h-5" />
         </Button>
-        <Button variant={plainButtons ? "ghost" : "secondary"} size="icon" className={plainButtons ? "bg-transparent hover:bg-transparent text-white hover:text-white border-0 shadow-none" : undefined} onClick={onClose} aria-label="Close full-size image">
+        <Button variant={plainButtons ? "ghost" : "secondary"} size="icon" className="min-h-11 min-w-11" onClick={onClose} aria-label="Close full-size image">
           <X className="w-5 h-5" />
         </Button>
       </div>
@@ -50,7 +58,9 @@ const ImageViewer: React.FC<ImageViewerProps> = ({ imageUrl, onClose, alt = 'Ful
         className="max-w-full max-h-full object-contain"
         onClick={(e) => e.stopPropagation()}
       />
-    </div>
+    </Dialog.Content>
+    </Dialog.Portal>
+    </Dialog.Root>
   );
 };
 

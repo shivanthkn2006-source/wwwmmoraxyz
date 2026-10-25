@@ -1,10 +1,11 @@
 import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ChatUser } from '@/hooks/useRealTimeChat';
 import { formatDistanceToNow } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import { useEventGlow, getAvatarGlowClass } from '@/hooks/useEventGlow';
 import StatusIconBadge from '@/components/StatusIconBadge';
 
@@ -34,24 +35,21 @@ const getStatusDot = (status?: string) => {
 };
 
 const ChatUserCard: React.FC<ChatUserCardProps> = ({ user, onClick }) => {
-  const navigate = useNavigate();
   const hasEvent = useEventGlow(user.event_date, user.event_recurring);
   const glowClass = getAvatarGlowClass(hasEvent, user.status);
 
   return (
     <Card
-      className="p-3 md:p-4 chat-warm-surface border-0 shadow-none rounded-none cursor-pointer"
-      onClick={() => onClick(user.user_id)}
+      className="relative p-3 md:p-4 chat-warm-surface border-0 shadow-none rounded-none"
     >
-      <div className="flex items-center justify-between">
+      <Button variant="ghost" className="absolute inset-0 h-full w-full rounded-none" aria-label={`Open conversation with ${user.display_name}`} onClick={() => onClick(user.user_id)} />
+      <div className="pointer-events-none flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="relative">
+            <Button asChild variant="ghost" className="pointer-events-auto relative z-10 h-auto min-h-11 min-w-11 p-0 rounded-full">
+              <Link to={`/profile/${user.user_id}`} aria-label={`View ${user.display_name}’s profile`}>
             <Avatar 
               className={`w-10 h-10 md:w-12 md:h-12 ${glowClass} ring-2 ring-[hsl(var(--oni-cyan))]/30`}
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/profile/${user.user_id}`);
-              }}
             >
               <AvatarImage
                 src={user.profile_photo_url || ''}
@@ -61,6 +59,8 @@ const ChatUserCard: React.FC<ChatUserCardProps> = ({ user, onClick }) => {
                 M'Mora
               </AvatarFallback>
             </Avatar>
+              </Link>
+            </Button>
             <StatusIconBadge status={user.status} size="sm" />
           </div>
           <div className="flex-1 min-w-0">
