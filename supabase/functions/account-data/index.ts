@@ -71,9 +71,13 @@ serve(async (req) => {
     if (action === 'export') {
       const bundle: Record<string, unknown[]> = {};
       for (const table of tables) {
-        const { data, error } = await db.from(table).select('*').eq('user_id', user.id).limit(5000);
-        if (error || !Array.isArray(data)) return json({ ok: false, error: 'Export could not be prepared. Please try again.' }, 503);
-        if (data.length > 0) bundle[table] = data;
+        let rows: unknown[];
+        try {
+          rows = await exportOwnedRows(db, table, user.id);
+        } catch {
+          return json({ ok: false, error: 'Export could not be prepared. Please try again.' }, 503);
+        }
+        if (rows.length > 0) bundle[table] = rows;
       }
       const { data: profile, error: profileError } = await db.from('profiles').select('*').eq('id', user.id).maybeSingle();
       if (profileError) return json({ ok: false, error: 'Export could not be prepared. Please try again.' }, 503);
