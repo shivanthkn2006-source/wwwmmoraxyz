@@ -1,4 +1,8 @@
 # Privacy repair — 26 October 2026
+## Resumed Oct 26 — #7 safeguards and uploaded plans
+- [ ] Trace counter-store failures and fallback pricing; repair confirmed gaps with mocked dependencies only, no internal requests or inference.
+- [ ] Review both uploaded documents one by one; revise v19 with observed results separate from hosted/operator blockers.
+- [ ] Keep new document/service destinations temporarily on myzoe.xyz / www.myzoe.xyz; no domain publication or identity changes in this audit.
 - [x] Reject discovery/export query errors; block login removal on configured cleanup errors, full storage pages and directories; truthful inline error states.
 - [x] Twenty mock-only handler/UI tests passed; cache-bypassed current-source desktop/phone errors inspected, no logout/page errors/overflow.
 - [x] Export pagination fixed: pages through all rows (1k pages), fails closed past 100k rows/table instead of silent 5,000-row truncation; 18 handler tests; account-data deployed (SHA 00089337…).
