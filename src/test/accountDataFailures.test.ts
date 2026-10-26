@@ -141,7 +141,11 @@ describe('storage cleanup is recursive and paginated', () => {
  it('removes nested folder objects, not just the top level', async () => {
   const f = fixture('none'); const response = await f.run('delete');
   expect((await response.json()).ok).toBe(true);
-  expect(f.removedPaths.sort()).toEqual(['caller/nested/deep.jpg', 'caller/p0.jpg']);
+  // 3 buckets x (1 top-level file + 1 nested file)
+  expect(f.removedPaths.sort()).toEqual([
+   'caller/nested/deep.jpg', 'caller/nested/deep.jpg', 'caller/nested/deep.jpg',
+   'caller/p0.jpg', 'caller/p0.jpg', 'caller/p0.jpg',
+  ]);
  });
  it('paginates folders with more than one page of files', async () => {
   // 250 top-level files force three 100-entry list pages per bucket
