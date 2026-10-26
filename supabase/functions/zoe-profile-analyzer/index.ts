@@ -6,7 +6,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,7 +22,9 @@ serve(async (req) => {
   if (__caller instanceof Response) return __caller;
 
   try {
-    const { context, userId } = await req.json();
+    const { context, userId: requestedUserId } = await req.json();
+    // Identity is always the verified caller, never a body-supplied id.
+    const userId = bindOwner(__caller, requestedUserId);
     const SOVEREIGN_AI_KEY = sovereignKey();
 
     if (!SOVEREIGN_AI_KEY) {

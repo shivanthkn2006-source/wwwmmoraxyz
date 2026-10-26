@@ -1,4 +1,4 @@
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { 
@@ -161,11 +161,14 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  { const __c = await requireCaller(req, 'member'); if (__c instanceof Response) return __c; }
+  const __c = await requireCaller(req, 'member');
+  if (__c instanceof Response) return __c;
 
   try {
     const body = await req.json();
-    const { command, userId, context } = requestSchema.parse(body);
+    const { command, userId: requestedUserId, context } = requestSchema.parse(body);
+    // Identity is always the verified caller, never a body-supplied id.
+    const userId = bindOwner(__c, requestedUserId);
 
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
     if (!GROQ_API_KEY) {

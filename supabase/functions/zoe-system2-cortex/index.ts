@@ -6,7 +6,7 @@ import {
   createErrorResponse,
 } from "../_shared/ai-telemetry.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ZOE SYSTEM 2 CORTEX - THE REASONING WRAPPER
@@ -534,7 +534,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as System2Request;
-    const { command, userId, mode = 'standard', context, options } = body;
+    const { command, userId: requestedUserId, mode = 'standard', context, options } = body;
+    // Identity is always the verified caller, never a body-supplied id.
+    const userId = bindOwner(__caller, requestedUserId);
 
     if (!command?.trim()) {
       return createErrorResponse({ code: 'INTERNAL_ERROR', message: 'Command is required' }, 400);

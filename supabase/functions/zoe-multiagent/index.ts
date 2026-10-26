@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { sovereignFetch, sovereignKey } from "../_shared/sovereign-ai.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -362,7 +362,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { command, userId, mode = 'autonomous', context } = requestSchema.parse(body);
+    const { command, userId: requestedUserId, mode = 'autonomous', context } = requestSchema.parse(body);
+    // Identity is always the verified caller, never a body-supplied id.
+    const userId = bindOwner(__caller, requestedUserId);
 
     const SOVEREIGN_AI_KEY = sovereignKey();
     if (!SOVEREIGN_AI_KEY) {
