@@ -13889,6 +13889,13 @@ export type Database = {
         }
         Returns: number
       }
+      list_member_tables: {
+        Args: never
+        Returns: {
+          member_column: string
+          table_name: string
+        }[]
+      }
       list_owned_tables: {
         Args: never
         Returns: {
