@@ -4,15 +4,12 @@ import { EXPORT_PAGE_SIZE, EXPORT_ROW_CEILING, fetchAllRows } from '@/lib/pagina
 /** Builds a fake range query returning `sizes[i]` rows on the i-th call. */
 function fakeQuery(sizes: number[], errorOnCall = -1) {
   const calls: Array<[number, number]> = [];
-  const factory = (from: number, to: number) => {
+  const factory = async (from: number, to: number) => {
     calls.push([from, to]);
     const idx = calls.length - 1;
-    return {
-      range: async () =>
-        idx === errorOnCall
-          ? { data: null, error: { message: 'boom' } }
-          : { data: Array.from({ length: sizes[idx] ?? 0 }, (_, i) => ({ n: from + i })), error: null },
-    };
+    return idx === errorOnCall
+      ? { data: null, error: { message: 'boom' } }
+      : { data: Array.from({ length: sizes[idx] ?? 0 }, (_, i) => ({ n: from + i })), error: null };
   };
   return { factory, calls };
 }
