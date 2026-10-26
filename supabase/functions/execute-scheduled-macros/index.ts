@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { publicGuard } from '../_shared/public-guard.ts';
+import { requireCronOrAdmin } from '../_shared/caller-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,6 +29,10 @@ Deno.serve(async (req) => {
   }
   const __guard = await publicGuard(req, { name: 'execute-scheduled-macros', limit: 30, windowSeconds: 60 });
   if (__guard.response) return __guard.response;
+  // Scheduler/admin only: this executes members' macros with the service role,
+  // so an anonymous caller must never be able to trigger it.
+  const __cron = await requireCronOrAdmin(req, 'execute-scheduled-macros');
+  if (__cron instanceof Response) return __cron;
 
   try {
     const supabase = createClient(

@@ -10,6 +10,7 @@
  *   POST {probe:true} → same, plus a live ping per configured service
  */
 import { publicGuard } from '../_shared/public-guard.ts';
+import { requireCaller } from '../_shared/caller-guard.ts';
 
 // deno-lint-ignore no-explicit-any
 declare const Deno: any;
@@ -302,7 +303,13 @@ Deno.serve(async (req: Request) => {
   const guard = await publicGuard(req, { name: 'zoe-api-status', limit: 30, windowSeconds: 60 });
   if (guard.response) return guard.response;
 
-  const wantProbe = req.method !== 'GET' && (guard.body as { probe?: boolean }).probe !== false;
+  // Signed-in members only: key presence is internal information, and live
+  // probes spend paid provider quota, so probing is admin/service-only.
+  const caller = await requireCaller(req, 'member');
+  if (caller instanceof Response) return caller;
+
+  const mayProbe = caller.kind === 'service' || caller.isAdmin;
+  const wantProbe = mayProbe && req.method !== 'GET' && (guard.body as { probe?: boolean }).probe !== false;
 
   const apis = await Promise.all(
     API_DEFS.map(async (def) => {
