@@ -124,7 +124,7 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => { reset(); onOpenChange(false); }}>Cancel</Button>
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => { clearDraft(); reset(); onOpenChange(false); }}>Cancel</Button>
           <Button
             type="button"
             disabled={busy || (!files.length && !title.trim() && !text.trim())}
@@ -135,6 +135,7 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
                 tags: tags.split(/[#,\s]+/).map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 12),
                 files,
               });
+              clearDraft();
               reset();
               onOpenChange(false);
             }}

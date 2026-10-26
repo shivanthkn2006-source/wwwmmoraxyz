@@ -76,6 +76,7 @@ export default function SubmitJokePage() {
         source: 'member',
       });
       if (error) throw error;
+      clearDraft();
       window.dispatchEvent(new CustomEvent('mmora:humor-refresh'));
       toast.success('Your joke is live in the Global feed.');
       navigate('/zoe-lol');
