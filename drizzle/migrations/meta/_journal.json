@@ -71,6 +71,13 @@
       "when": 1792495570792,
       "tag": "0009_member_quick_unlock",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792999530636,
+      "tag": "0010_list_member_tables_for_account_data",
+      "breakpoints": true
     }
   ]
 }
