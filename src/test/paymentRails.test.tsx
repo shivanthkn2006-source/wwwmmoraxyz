@@ -18,7 +18,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: { rpc: mocks.rpc, from: mocks.from },
 }));
-vi.mock('@/lib/auth', () => ({ useAuth: () => ({ user: { id: 'user-1' } }) }));
+const stableUser = { id: 'user-1' };
+vi.mock('@/lib/auth', () => ({ useAuth: () => ({ user: stableUser }) }));
 vi.mock('sonner', () => ({ toast: { success: mocks.toastSuccess, error: mocks.toastError } }));
 vi.mock('@/hooks/useTierLimits', () => ({
   useTierLimits: () => ({
