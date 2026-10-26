@@ -10,8 +10,7 @@
  * `publicGuard` keeps the full WAF for POST and applies the method-agnostic
  * subset — user-agent reputation, Cloudflare verdicts, Sentinel IP blocks and
  * the shared fixed-window rate limiter — to everything else. It never throws;
- * on infrastructure failure it fails open so a database blip cannot take a
- * public surface down.
+ * counter-store failure returns a retryable 503 rather than bypassing limits.
  */
 import {
   guardRequest,
@@ -79,11 +78,12 @@ export async function publicGuard(req: Request, options: WafOptions): Promise<Pu
   if (await isSentinelBlockedIp(ip)) return deny('sentinel_block', 403);
 
   const scope = options.scope ?? new URL(req.url).searchParams.get('action') ?? req.method.toLowerCase();
-  const { allowed, remaining } = await consumeRateLimit(
+  const { allowed, remaining, unavailable } = await consumeRateLimit(
     `${options.name}:${scope.slice(0, 32)}:${ip}`,
     options.limit,
     options.windowSeconds,
   );
+  if (unavailable) return { ...base, remaining: 0, rule: 'rate_limit_unavailable', response: refuse(503, 'Temporarily unavailable') };
   if (!allowed) {
     void recordWafThreat('rate_limit', ip, cf, options.name);
     return {

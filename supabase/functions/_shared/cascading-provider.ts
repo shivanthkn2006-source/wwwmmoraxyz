@@ -18,6 +18,7 @@
  */
 
 import { applyCircuitBreaker } from './loop-breaker.ts';
+import { readFallbackPricePolicy } from './fallback-price-policy.ts';
 import { nvidiaChatByRole, NVIDIA_ROLES, type NvidiaRole } from './nvidia-provider.ts';
 
 async function callNvidia(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
@@ -42,6 +43,7 @@ export type CascadeMode = 'default' | 't1-primary';
 export type CascadeReason =
   | 'success'
   | 'missing_key'
+  | 'price_policy_unavailable'
   | 'rate_limit'        // 429
   | 'auth_error'        // 401 / 403
   | 'payment_required'  // 402
@@ -246,6 +248,8 @@ async function callGroqLlama(messages: Message[], opts: CascadeOptions): Promise
 async function callOpenRouter(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
   const apiKey = Deno.env.get('OPENROUTER_API_KEY');
   if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'OPENROUTER_API_KEY not set' };
+  const provider = readFallbackPricePolicy(key => Deno.env.get(key));
+  if (!provider) return { content: null, status: null, reasonCode: 'price_policy_unavailable', reasonText: 'OpenRouter fallback skipped: operator price ceilings are missing or invalid' };
   try {
     const resp = await withTimeout(fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -257,6 +261,7 @@ async function callOpenRouter(messages: Message[], opts: CascadeOptions): Promis
       },
       body: JSON.stringify({
         model: 'openrouter/auto',
+        provider,
         messages,
         max_tokens: opts.maxTokens ?? 500,
         temperature: opts.temperature ?? 0.7,
