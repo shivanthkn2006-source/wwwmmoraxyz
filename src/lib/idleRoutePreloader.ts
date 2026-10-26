@@ -16,6 +16,8 @@
  *  - Each import() failure is swallowed — preloading is best-effort.
  */
 
+import { isPublicDocumentRoute } from './publicDocumentRoutes';
+
 type Loader = () => Promise<unknown>;
 
 // Highest-traffic routes ranked by user reports. Order matters — first ones load first.
@@ -28,6 +30,7 @@ const PRELOAD_TARGETS: Array<{ name: string; load: Loader }> = [
 ];
 
 const shouldSkipPreload = (): boolean => {
+  if (isPublicDocumentRoute(window.location.pathname)) return true;
   try {
     const conn = (navigator as any).connection;
     if (conn?.saveData) return true;
@@ -61,9 +64,10 @@ export const startIdleRoutePreloader = () => {
 
     let i = 0;
     const next = () => {
-      if (i >= PRELOAD_TARGETS.length) return;
+      if (i >= PRELOAD_TARGETS.length || shouldSkipPreload()) return;
       const target = PRELOAD_TARGETS[i++];
       idle(() => {
+        if (shouldSkipPreload()) return;
         target.load()
           .then(() => console.log(`[IdlePreloader] Warmed ${target.name}`))
           .catch(() => { /* best-effort, ignore */ })

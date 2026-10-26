@@ -54,3 +54,4 @@
 
 - Account-data must fail on discovery/export errors and retain login after any required cleanup failure or unproven storage listing; clients require confirmed completion before signout, because partial cleanup is non-atomic and must never be reported as erasure.
 - Shared WAF counters fail closed with an unavailable verdict and HTTP 503 on unproven counters; OpenRouter auto fallback requires server-owned prompt/completion/request price ceilings before sending, because outages and missing policy must not authorize unlimited inference.
+- Public document routes share an exact-path light-shell list and skip member chunk warming and the fixed loader; the public index links only public policies, because document browsing must not load unrelated services or publish private audit material.
