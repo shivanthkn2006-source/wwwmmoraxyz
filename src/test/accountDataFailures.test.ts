@@ -141,17 +141,15 @@ describe('storage cleanup is recursive and paginated', () => {
  it('removes nested folder objects, not just the top level', async () => {
   const f = fixture('none'); const response = await f.run('delete');
   expect((await response.json()).ok).toBe(true);
-  expect(f.removedPaths.sort()).toEqual(['caller/nested/deep.jpg', 'caller/photo.jpg']);
+  expect(f.removedPaths.sort()).toEqual(['caller/nested/deep.jpg', 'caller/p0.jpg']);
  });
  it('paginates folders with more than one page of files', async () => {
-  const f = fixture('none');
-  // 250 files at the top level forces three 100-entry list pages
-  const many = Array.from({ length: 250 }, (_, i) => ({ id: `p${i}`, name: `p${i}.jpg` }));
-  const original = f; void original;
-  const f2 = fixture('none');
-  // patch the store through a second fixture run is not possible; use the paginated fixture below
-  void many; void f2;
-  const response = await f.run('delete');
+  // 250 top-level files force three 100-entry list pages per bucket
+  const f = fixture('none', true, 0, 250); const response = await f.run('delete');
   expect((await response.json()).ok).toBe(true);
+  // 3 buckets x (250 top-level files + 1 nested file) = 753 objects removed
+  expect(f.removedPaths).toHaveLength(753);
+  expect(f.removedPaths).toContain('caller/nested/deep.jpg');
+  expect(f.removedPaths).toContain('caller/p249.jpg');
  });
 });
