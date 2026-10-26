@@ -27,65 +27,67 @@ export const ComprehensiveActivityExport = () => {
 
     try {
       // Fetch user profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
+      if (profileError) throw new Error(`profile export failed: ${profileError.message}`);
 
-      // Fetch sessions
-      const { data: sessions } = await supabase
-        .from('user_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('started_at', { ascending: false });
-
-      // Fetch page views
-      const { data: pageViews } = await supabase
-        .from('page_views')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('entered_at', { ascending: false });
-
-      // Fetch activity log
-      const { data: activityLog } = await supabase
-        .from('user_activity_log')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      // Fetch posts
-      const { data: posts } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      // Fetch messages
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
+      // Page through every row: a plain select silently truncates at the
+      // server's max-rows, which would produce a quietly incomplete export.
+      const [sessions, pageViews, activityLog, posts, messages] = await Promise.all([
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('user_sessions').select('*').eq('user_id', user.id)
+              .order('started_at', { ascending: false }).range(from, to),
+          'sessions',
+        ),
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('page_views').select('*').eq('user_id', user.id)
+              .order('entered_at', { ascending: false }).range(from, to),
+          'page views',
+        ),
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('user_activity_log').select('*').eq('user_id', user.id)
+              .order('created_at', { ascending: false }).range(from, to),
+          'activity log',
+        ),
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('posts').select('*').eq('user_id', user.id)
+              .order('created_at', { ascending: false }).range(from, to),
+          'posts',
+        ),
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('messages').select('*')
+              .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+              .order('created_at', { ascending: false }).range(from, to),
+          'messages',
+        ),
+      ]);
 
       // Calculate statistics
       const stats = {
-        totalSessions: sessions?.length || 0,
-        totalPageViews: pageViews?.length || 0,
-        totalActivityLogs: activityLog?.length || 0,
-        totalPosts: posts?.length || 0,
-        totalMessages: messages?.length || 0,
+        totalSessions: sessions.length,
+        totalPageViews: pageViews.length,
+        totalActivityLogs: activityLog.length,
+        totalPosts: posts.length,
+        totalMessages: messages.length,
         accountCreated: profile?.created_at,
-        lastActivity: sessions?.[0]?.last_activity_at,
+        lastActivity: sessions[0]?.last_activity_at,
       };
 
       return {
         userInfo: profile,
-        sessions: sessions || [],
-        pageViews: pageViews || [],
-        activityLog: activityLog || [],
-        posts: posts || [],
-        messages: messages || [],
+        sessions,
+        pageViews,
+        activityLog,
+        posts,
+        messages,
         stats,
       };
     } catch (error) {
