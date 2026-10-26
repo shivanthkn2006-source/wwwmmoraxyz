@@ -23,23 +23,35 @@ export interface GrowthExportBundle {
 }
 
 export async function collectGrowthExport(userId: string): Promise<GrowthExportBundle> {
-  const [prefRes, itemRes, savedRes, eventRes] = await Promise.all([
+  const [prefRes, items, saved, events] = await Promise.all([
     supabase.from('growth_preferences').select('*').eq('user_id', userId).maybeSingle(),
-    supabase
-      .from('growth_feed_items')
-      .select('id, local_date, slot, title, category, content, actionable_step, status, source, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1000),
-    supabase.from('growth_saved_items').select('item_id').eq('user_id', userId).limit(1000),
-    supabase
-      .from('growth_card_events')
-      .select('item_id, slot, category, event_type, surface, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1000),
+    fetchAllRows<Record<string, unknown>>(
+      (from, to) =>
+        supabase
+          .from('growth_feed_items')
+          .select('id, local_date, slot, title, category, content, actionable_step, status, source, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .range(from, to),
+      'growth insights',
+    ),
+    fetchAllRows<{ item_id: string }>(
+      (from, to) => supabase.from('growth_saved_items').select('item_id').eq('user_id', userId).range(from, to),
+      'growth saved items',
+    ),
+    fetchAllRows<Record<string, unknown>>(
+      (from, to) =>
+        supabase
+          .from('growth_card_events')
+          .select('item_id, slot, category, event_type, surface, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .range(from, to),
+      'growth events',
+    ),
   ]);
 
+  if (prefRes.error) throw new Error(`growth preferences export failed: ${prefRes.error.message}`);
   const prefs = (prefRes.data as Record<string, unknown> | null) ?? null;
   if (prefs) delete prefs.push_subscription; // device token is not user-facing data
 
@@ -47,9 +59,9 @@ export async function collectGrowthExport(userId: string): Promise<GrowthExportB
     exported_at: new Date().toISOString(),
     user_id: userId,
     preferences: prefs,
-    insights: (itemRes.data as Array<Record<string, unknown>> | null) ?? [],
-    saved_item_ids: ((savedRes.data as Array<{ item_id: string }> | null) ?? []).map((r) => r.item_id),
-    events: (eventRes.data as Array<Record<string, unknown>> | null) ?? [],
+    insights: items,
+    saved_item_ids: saved.map((r) => r.item_id),
+    events,
   };
 }
 
