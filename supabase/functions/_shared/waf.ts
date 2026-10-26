@@ -64,6 +64,7 @@ export type WafRuleId =
   | 'cf_bot_score'
   | 'cf_geo_block'
   | 'sentinel_block'
+  | 'rate_limit_unavailable'
   | 'rate_limit';
 
 export interface CloudflareSignals {
@@ -153,17 +154,18 @@ const adminClient = (): SupabaseClient | null => {
 };
 
 /**
- * Fixed-window counter. Never throws and never blocks the request path: if the
- * counter store is unreachable the request is allowed through (fail-open), so
- * a database blip can't take signup down.
+ * Fixed-window counter. Unproven counters fail closed; an outage is distinct
+ * from an exhausted quota so callers can return a retryable 503, not a 429.
  */
 export async function consumeRateLimit(
   bucket: string,
   limit: number,
   windowSeconds: number,
-): Promise<{ allowed: boolean; remaining: number }> {
+): Promise<{ allowed: boolean; remaining: number; unavailable?: boolean }> {
+  const unavailable = { allowed: false, remaining: 0, unavailable: true };
+  if (!Number.isSafeInteger(limit) || limit <= 0 || !Number.isSafeInteger(windowSeconds) || windowSeconds <= 0) return unavailable;
   const db = adminClient();
-  if (!db) return { allowed: true, remaining: limit };
+  if (!db) return unavailable;
   const now = Date.now();
   const windowStart = new Date(Math.floor(now / (windowSeconds * 1000)) * windowSeconds * 1000).toISOString();
   try {
@@ -171,10 +173,10 @@ export async function consumeRateLimit(
       _bucket: bucket,
       _window_start: windowStart,
     });
-    if (error || typeof data !== 'number') return { allowed: true, remaining: limit };
+    if (error || typeof data !== 'number' || !Number.isSafeInteger(data) || data <= 0) return unavailable;
     return { allowed: data <= limit, remaining: Math.max(0, limit - data) };
   } catch {
-    return { allowed: true, remaining: limit };
+    return unavailable;
   }
 }
 
@@ -265,12 +267,13 @@ export async function guardRequest(req: Request, options: WafOptions): Promise<W
     }
   }
 
-  const scope = options.scope ?? (typeof body.action === 'string' ? body.action.slice(0, 32) : 'default');
-  const { allowed, remaining } = await consumeRateLimit(
+  const scope = options.scope ?? 'default';
+  const { allowed, remaining, unavailable } = await consumeRateLimit(
     `${options.name}:${scope}:${ip}`,
     options.limit,
     options.windowSeconds,
   );
+  if (unavailable) return { ...empty, body, remaining: 0, rule: 'rate_limit_unavailable', response: refuse(503) };
   if (!allowed) {
     void recordWafThreat('rate_limit', ip, cf, options.name);
     return {

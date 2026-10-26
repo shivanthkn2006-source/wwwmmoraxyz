@@ -53,3 +53,4 @@
 - Zoe Infinity image generation has no dormant model-returned URL downloader; Kaleido paths reject URL normalization/encoded traversal and Kaleido/JustAPI/ImageNow downloads refuse redirects, because output text and redirect locations must not expand outbound authority.
 
 - Account-data must fail on discovery/export errors and retain login after any required cleanup failure or unproven storage listing; clients require confirmed completion before signout, because partial cleanup is non-atomic and must never be reported as erasure.
+- Shared WAF counters fail closed with an unavailable verdict and HTTP 503 on unproven counters; OpenRouter auto fallback requires server-owned prompt/completion/request price ceilings before sending, because outages and missing policy must not authorize unlimited inference.
