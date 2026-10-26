@@ -3,23 +3,31 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-type Failure = 'discovery' | 'table-export' | 'profile-export' | 'table-delete' | 'profile-delete' | 'storage-list' | 'storage-remove' | 'login' | 'full-page' | 'directory' | 'none';
-function fixture(failure: Failure, signedIn = true) {
+type Failure = 'discovery' | 'table-export' | 'table-export-page2' | 'profile-export' | 'table-delete' | 'profile-delete' | 'storage-list' | 'storage-remove' | 'login' | 'full-page' | 'directory' | 'none';
+function fixture(failure: Failure, signedIn = true, rowCount = 0) {
  let handler: ((req: Request) => Promise<Response>) | undefined;
  const targets: string[] = [];
  const login = vi.fn(async () => ({ error: failure === 'login' ? { message: 'fixture' } : null }));
  const error = (condition: boolean) => condition ? { message: 'fixture' } : null;
+ const allRows = Array.from({ length: rowCount }, (_, i) => ({ id: i, user_id: 'caller' }));
  const db = {
   rpc: async () => ({ data: failure === 'discovery' ? null : [{ table_name: 'fixture' }], error: error(failure === 'discovery') }),
   from: (table: string) => {
    let deleting = false;
+   let slice: [number, number] | null = null;
    const query = {
     select: () => query,
     delete: () => { deleting = true; return query; },
     eq: (_key: string, id: string) => { targets.push(id); return query; },
+    range: (from: number, to: number) => { slice = [from, to]; return query; },
     limit: async () => ({ data: [], error: error(failure === 'table-export') }),
     maybeSingle: async () => ({ data: null, error: error(failure === 'profile-export') }),
-    then: (resolve: (result: unknown) => void) => resolve({ error: error(deleting && (failure === 'table-delete' && table === 'fixture' || failure === 'profile-delete' && table === 'profiles')) }),
+    then: (resolve: (result: unknown) => void) => {
+     if (deleting) return resolve({ error: error(failure === 'table-delete' && table === 'fixture' || failure === 'profile-delete' && table === 'profiles') });
+     const [a, b] = slice ?? [0, 999];
+     const pageFailed = failure === 'table-export' || (failure === 'table-export-page2' && a >= 1000);
+     resolve({ data: pageFailed ? null : allRows.slice(a, b + 1), error: error(pageFailed) });
+    },
    }; return query;
   },
   storage: { from: () => ({
@@ -61,6 +69,18 @@ describe('privacy completion failures execute the unchanged entrypoint imports w
  });
  it('returns a successful empty export when queries succeed', async () => {
   const f = fixture('none'); expect((await (await f.run('export')).json()).ok).toBe(true); expect(f.login).not.toHaveBeenCalled();
+ });
+ it('exports every row across pages instead of truncating at one page', async () => {
+  const f = fixture('none', true, 5200); const body = await (await f.run('export')).json();
+  expect(body.ok).toBe(true); expect(body.data.fixture).toHaveLength(5200);
+ });
+ it('fails closed when a later export page fails', async () => {
+  const f = fixture('table-export-page2', true, 2500); const response = await f.run('export');
+  expect(response.status).toBe(503); expect((await response.json()).ok).toBe(false); expect(f.login).not.toHaveBeenCalled();
+ });
+ it('fails closed instead of truncating an export past the page ceiling', async () => {
+  const f = fixture('none', true, 100_500); const response = await f.run('export');
+  expect(response.status).toBe(503); expect((await response.json()).ok).toBe(false);
  });
  it('requires a signed-in caller', async () => {
   const f = fixture('none', false); const response = await f.run('delete'); expect(response.status).toBe(401); await response.text(); expect(f.login).not.toHaveBeenCalled();

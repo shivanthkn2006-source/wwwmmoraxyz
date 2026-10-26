@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/auth';
 import { HUMOR_CATEGORIES, HUMOR_CATEGORY_LABELS, type HumorCategory } from '@/lib/humor';
+import { useAutosaveDraft } from '@/hooks/useAutosaveDraft';
 import { supabase } from '@/integrations/supabase/client';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -22,6 +23,20 @@ export default function SubmitJokePage() {
   const [category, setCategory] = useState<HumorCategory>('relatable');
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const { clearDraft } = useAutosaveDraft({
+    surface: 'submit-joke',
+    values: { title, text, category },
+    files: file ? [file] : [],
+    enabled: true,
+    onRestore: (draft) => {
+      setTitle(draft.values.title ?? '');
+      setText(draft.values.text ?? '');
+      if (HUMOR_CATEGORIES.includes(draft.values.category as HumorCategory)) setCategory(draft.values.category as HumorCategory);
+      if (draft.files[0]) setFile(draft.files[0]);
+      toast.success('Your draft was restored.');
+    },
+  });
 
   const publish = async () => {
     const headline = title.trim();
@@ -61,6 +76,7 @@ export default function SubmitJokePage() {
         source: 'member',
       });
       if (error) throw error;
+      clearDraft();
       window.dispatchEvent(new CustomEvent('mmora:humor-refresh'));
       toast.success('Your joke is live in the Global feed.');
       navigate('/zoe-lol');

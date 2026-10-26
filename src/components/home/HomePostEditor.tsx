@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, Hash, Image as ImageIcon, Upload, Video, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useAutosaveDraft } from '@/hooks/useAutosaveDraft';
 
 export interface HomePostDraft {
   title: string;
@@ -28,6 +30,20 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
   const fileRef = useRef<HTMLInputElement>(null);
   const previews = useMemo(() => files.map((file) => ({ file, url: URL.createObjectURL(file) })), [files]);
   useEffect(() => () => previews.forEach(({ url }) => URL.revokeObjectURL(url)), [previews]);
+
+  const { clearDraft } = useAutosaveDraft({
+    surface: 'home-post',
+    values: { title, text, tags },
+    files,
+    enabled: open,
+    onRestore: (draft) => {
+      setTitle(draft.values.title ?? '');
+      setText(draft.values.text ?? '');
+      setTags(draft.values.tags ?? '');
+      if (draft.files.length) setFiles(draft.files.slice(0, 10));
+      toast.success('Your draft was restored.');
+    },
+  });
 
   const reset = () => {
     setTitle('');
@@ -108,7 +124,7 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => { reset(); onOpenChange(false); }}>Cancel</Button>
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => { clearDraft(); reset(); onOpenChange(false); }}>Cancel</Button>
           <Button
             type="button"
             disabled={busy || (!files.length && !title.trim() && !text.trim())}
@@ -119,6 +135,7 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
                 tags: tags.split(/[#,\s]+/).map((tag) => tag.trim().toLowerCase()).filter(Boolean).slice(0, 12),
                 files,
               });
+              clearDraft();
               reset();
               onOpenChange(false);
             }}
