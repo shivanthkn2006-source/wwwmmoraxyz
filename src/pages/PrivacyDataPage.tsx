@@ -14,12 +14,14 @@ import { toast } from 'sonner';
 const PrivacyDataPage: React.FC = () => {
   const [busy, setBusy] = useState<'export' | 'delete' | null>(null);
   const [confirm, setConfirm] = useState('');
+  const [failure, setFailure] = useState<{ action: 'export' | 'delete'; message: string } | null>(null);
 
   const exportData = async () => {
     setBusy('export');
+    setFailure(null);
     try {
       const { data, error } = await supabase.functions.invoke('account-data', { body: { action: 'export' } });
-      if (error || !data?.ok) throw new Error(error?.message ?? 'Export failed');
+      if (error || !data?.ok || data?.partial || data?.complete === false) throw new Error('Export incomplete');
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -29,8 +31,8 @@ const PrivacyDataPage: React.FC = () => {
       link.click();
       URL.revokeObjectURL(url);
       toast.success('Your data file has been downloaded.');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Export failed');
+    } catch {
+      setFailure({ action: 'export', message: 'Your data file could not be prepared. No file was downloaded. Please try again.' });
     } finally {
       setBusy(null);
     }
@@ -42,16 +44,17 @@ const PrivacyDataPage: React.FC = () => {
       return;
     }
     setBusy('delete');
+    setFailure(null);
     try {
       const { data, error } = await supabase.functions.invoke('account-data', {
         body: { action: 'delete', confirm: 'DELETE' },
       });
-      if (error || !data?.ok) throw new Error(error?.message ?? data?.error ?? 'Deletion failed');
+      if (error || !data?.ok || data?.login_removed !== true || data?.partial || data?.failed_tables?.length) throw new Error('Deletion incomplete');
       toast.success('Your account and data have been erased.');
       await supabase.auth.signOut();
       window.location.href = '/auth';
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Deletion failed');
+    } catch {
+      setFailure({ action: 'delete', message: 'Deletion was not confirmed. Some data may already have been removed. You have not been signed out here. Please try again.' });
     } finally {
       setBusy(null);
     }
@@ -83,6 +86,7 @@ const PrivacyDataPage: React.FC = () => {
           <Button variant="outline" onClick={exportData} disabled={busy !== null}>
             {busy === 'export' ? 'Preparing…' : 'Download'}
           </Button>
+          {failure?.action === 'export' && <p role="alert" className="text-sm text-destructive break-words">{failure.message}</p>}
         </section>
 
         <section className="space-y-3 rounded-lg border border-border p-5">
@@ -101,6 +105,7 @@ const PrivacyDataPage: React.FC = () => {
           <Button variant="destructive" onClick={deleteAccount} disabled={busy !== null || confirm !== 'DELETE'}>
             {busy === 'delete' ? 'Erasing…' : 'Delete everything'}
           </Button>
+          {failure?.action === 'delete' && <p role="alert" className="text-sm text-destructive break-words">{failure.message}</p>}
         </section>
       </div>
     </main>

@@ -22,8 +22,12 @@ const json = (body: Record<string, unknown>, status = 200) =>
 /** Tables whose rows belong to a member, discovered from the schema. */
 // deno-lint-ignore no-explicit-any
 async function ownedTables(db: any): Promise<string[]> {
-  const { data } = await db.rpc('list_owned_tables');
-  return Array.isArray(data) ? (data as { table_name: string }[]).map((r) => r.table_name) : [];
+  const { data, error } = await db.rpc('list_owned_tables');
+  if (error || !Array.isArray(data) || data.length === 0 ||
+      data.some((r) => typeof r?.table_name !== 'string' || !r.table_name)) {
+    throw new Error('Account data discovery unavailable');
+  }
+  return (data as { table_name: string }[]).map((r) => r.table_name);
 }
 
 const STORAGE_BUCKETS = ['posts', 'avatars', 'vault'];
@@ -51,9 +55,11 @@ serve(async (req) => {
       const bundle: Record<string, unknown[]> = {};
       for (const table of tables) {
         const { data, error } = await db.from(table).select('*').eq('user_id', user.id).limit(5000);
-        if (!error && data && data.length > 0) bundle[table] = data;
+        if (error || !Array.isArray(data)) return json({ ok: false, error: 'Export could not be prepared. Please try again.' }, 503);
+        if (data.length > 0) bundle[table] = data;
       }
-      const { data: profile } = await db.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      const { data: profile, error: profileError } = await db.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      if (profileError) return json({ ok: false, error: 'Export could not be prepared. Please try again.' }, 503);
       if (profile) bundle.profile = [profile];
 
       return json({
@@ -79,14 +85,29 @@ serve(async (req) => {
       }
 
       // Profile rows key on id rather than user_id in this schema.
-      await db.from('profiles').delete().eq('id', user.id);
+      const { error: profileError } = await db.from('profiles').delete().eq('id', user.id);
+      if (profileError) failed.push('profiles');
 
       for (const bucket of STORAGE_BUCKETS) {
-        const { data: files } = await db.storage.from(bucket).list(user.id, { limit: 1000 });
-        if (files && files.length > 0) {
-          await db.storage.from(bucket).remove(files.map((f: { name: string }) => `${user.id}/${f.name}`));
+        const { data: files, error: listError } = await db.storage.from(bucket).list(user.id, { limit: 1000 });
+        // A full page or a directory cannot prove that every object was listed.
+        // Fail closed until paginated/recursive cleanup is separately verified.
+        if (listError || !Array.isArray(files) || files.length >= 1000 ||
+            files.some((f: { id?: string | null; name?: string }) => !f.id || !f.name || f.name.includes('/'))) {
+          failed.push(`storage:${bucket}`);
+          continue;
+        }
+        if (files.length > 0) {
+          const { error: removeError } = await db.storage.from(bucket).remove(files.map((f: { name: string }) => `${user.id}/${f.name}`));
+          if (removeError) failed.push(`storage:${bucket}`);
         }
       }
+
+      if (failed.length > 0) return json({
+        ok: false, deleted_tables: removed.length, failed_tables: failed,
+        login_removed: false, partial: true,
+        error: 'Deletion did not finish. Some data may already have been removed. Your sign-in has been kept; please try again.',
+      }, 503);
 
       const { error: authDeleteError } = await db.auth.admin.deleteUser(user.id);
 
@@ -95,13 +116,14 @@ serve(async (req) => {
         deleted_tables: removed.length,
         failed_tables: failed,
         login_removed: !authDeleteError,
-        error: authDeleteError?.message,
-      });
+        partial: Boolean(authDeleteError),
+        error: authDeleteError ? 'Data cleanup finished, but sign-in removal did not. Please try again.' : undefined,
+      }, authDeleteError ? 503 : 200);
     }
 
     return json({ ok: false, error: 'unknown action' }, 400);
   } catch (error) {
     console.error('[account-data]', error);
-    return json({ ok: false, error: 'unexpected error' }, 500);
+    return json({ ok: false, login_removed: false, error: 'The request did not finish. Some data may already have changed. Please try again.' }, 503);
   }
 });
