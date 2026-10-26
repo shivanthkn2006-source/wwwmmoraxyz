@@ -148,7 +148,7 @@ serve(async (req) => {
     try {
       tables = await memberTables(db);
     } catch {
-      return json({ ok: false, error: 'Account data discovery unavailable. Please try again.' }, 503);
+      return json({ ok: false, login_removed: false, error: 'Account data discovery unavailable. Please try again.' }, 503);
     }
 
     if (action === 'export') {
