@@ -8,6 +8,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { nvidiaChat } from '../_shared/nvidia-provider.ts';
 import { fetchImageCascade, extFor } from '../_shared/image-cascade.ts';
 import { publicGuard } from '../_shared/public-guard.ts';
+import { requireCronOrAdmin } from '../_shared/caller-guard.ts';
 
 const URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
