@@ -63,6 +63,7 @@ export const CANONICAL_ROUTES: CanonicalRoute[] = [
   { path: "/dhf-calendar", label: "DHF calendar", dynamic: false },
   { path: "/dhf-dashboard", label: "DHF dashboard", dynamic: false },
   { path: "/dhf/essay/:postId", label: "DHF · essay", dynamic: true },
+  { path: "/documents", label: "Documents", dynamic: false },
   { path: "/ear-link-blueprint", label: "Ear link blueprint", dynamic: false },
   { path: "/exodus", label: "Exodus", dynamic: false },
   { path: "/exodus-map", label: "Exodus map", dynamic: false },
