@@ -26,9 +26,12 @@ function fixture(failure: Failure, signedIn = true, rowCount = 0, topLevelFiles 
    { id: 'm4', sender_id: 'caller', recipient_id: 'caller' },
   ],
  };
- // caller/photo.jpg plus nested folder caller/nested/deep.jpg
+ // caller/<files> plus nested folder caller/nested/deep.jpg
  const store: Record<string, Array<{ id: string | null; name: string }>> = {
-  caller: [{ id: 'a', name: 'photo.jpg' }, { id: null, name: 'nested' }],
+  caller: [
+   ...Array.from({ length: topLevelFiles }, (_, i) => ({ id: `p${i}`, name: `p${i}.jpg` })),
+   { id: null, name: 'nested' },
+  ],
   'caller/nested': [{ id: 'b', name: 'deep.jpg' }],
  };
  const db = {
