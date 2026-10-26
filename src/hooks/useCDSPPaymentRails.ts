@@ -184,17 +184,13 @@ export const useCDSPPaymentRails = () => {
       const transactionId = `txn_${Date.now()}_${user.id.slice(0, 8)}`;
       const amount = paymentMethod === 'credits' ? pricing.credits : pricing.karmaEquivalent;
 
-      // Deduct from appropriate balance
+      // Deduct from appropriate balance. Both paths go through server
+      // functions that lock the row and verify the real balance; the client
+      // never writes a balance directly (1 credit = 1,000 total_points).
       if (paymentMethod === 'credits') {
-        const newCredits = (state.wallet?.credits || 0) - pricing.credits;
-        const newTotalPoints = newCredits * 1000;
-        
-        await supabase
-          .from('profiles')
-          .update({ total_points: newTotalPoints })
-          .eq('user_id', user.id);
+        const { error: spendErr } = await supabase.rpc('spend_credits', { p_credits: pricing.credits * 1000 });
+        if (spendErr) throw spendErr;
       } else if (paymentMethod === 'karma_points') {
-        // Server checks and deducts the real balance; the client never sets it.
         const { error: spendErr } = await supabase.rpc('spend_resonance_points', { p_points: pricing.karmaEquivalent });
         if (spendErr) throw spendErr;
       }
@@ -255,7 +251,13 @@ export const useCDSPPaymentRails = () => {
       return { success: true, transactionId };
 
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Payment failed';
+      // PostgREST/RPC failures are plain objects with a message, not Error
+      // instances — read both so members see the real reason.
+      const errorMsg = error instanceof Error
+        ? error.message
+        : (typeof error === 'object' && error !== null && 'message' in error
+            ? String((error as { message: unknown }).message)
+            : 'Payment failed');
       console.error('[CDSP-PaymentRails] Payment error:', error);
       
       setState(prev => ({ ...prev, isProcessing: false, lastError: errorMsg }));

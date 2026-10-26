@@ -45,7 +45,7 @@ export const TierGateWrapper = ({ feature, children, onGated }: TierGateWrapperP
           <p className="text-muted-foreground max-w-md">
             You've reached your {tier} tier limit for this feature. Upgrade to continue using advanced capabilities.
           </p>
-          <Button size="lg" className="gap-2">
+          <Button size="lg" className="gap-2" onClick={() => showUpgradePrompt(feature, tier)}>
             <Sparkles className="w-4 h-4" />
             Upgrade to Unlock
           </Button>

@@ -14025,6 +14025,7 @@ export type Database = {
         Returns: boolean
       }
       sovereign_admin_id: { Args: never; Returns: string }
+      spend_credits: { Args: { p_credits: number }; Returns: number }
       spend_karma_vr: { Args: { p_item: string }; Returns: number }
       spend_resonance_points: { Args: { p_points: number }; Returns: number }
       track_viral_share: {
