@@ -1,3 +1,8 @@
+# Privacy repair — 26 October 2026
+- [x] Reject discovery/export query errors; block login removal on configured cleanup errors, full storage pages and directories; truthful inline error states.
+- [x] Twenty mock-only handler/UI tests passed; cache-bypassed current-source desktop/phone errors inspected, no logout/page errors/overflow.
+- [ ] Hosted deployment/rights-flow verification not performed (controlled mocks only). Complete pagination/ownership/storage inventory, shared-message policy and retention/vendor decisions remain blockers.
+
 # M'Mora Village roadmap
 
 ## Oct 25 v14 — QA finding + audit reconciliation

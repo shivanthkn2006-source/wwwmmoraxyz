@@ -51,3 +51,5 @@
 - Cascade provider API responses (Cloudflare/DeepAI/Pixazo/Kaleido JSON) read through readJsonBounded/readTextBounded (1 MiB, 30s; Cloudflare sized for one full-budget base64 image), Kaleido accepts only root-relative paths on its configured origin, and a caller abort signal stops the cascade between providers, because API bodies are as unbounded as image bodies.
 - Edit-image callers must send `imageBase64` (the only field the function reads); the Home dock auto-menu excludes `/__` dev harnesses and uses five phone columns, because field drift silently broke edits and seven cramped columns were unreadable.
 - Zoe Infinity image generation has no dormant model-returned URL downloader; Kaleido paths reject URL normalization/encoded traversal and Kaleido/JustAPI/ImageNow downloads refuse redirects, because output text and redirect locations must not expand outbound authority.
+
+- Account-data must fail on discovery/export errors and retain login after any required cleanup failure or unproven storage listing; clients require confirmed completion before signout, because partial cleanup is non-atomic and must never be reported as erasure.
