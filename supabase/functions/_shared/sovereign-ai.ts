@@ -1,5 +1,6 @@
 import { cascadeFetch } from './image-cascade.ts';
 import { readJsonBounded, readTextBounded } from './cascade-image-download.ts';
+import { readFallbackPricePolicy } from './fallback-price-policy.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN AI SHIM — drop-in replacement for the Lovable AI Gateway
@@ -351,9 +352,12 @@ async function callOpenAICompatVision(
 ): Promise<Response | null> {
   const messages: AnyMsg[] = payload.messages || [];
   if (!messages.length) return null;
+  const pricePolicy = provider === 'openrouter' ? readFallbackPricePolicy(key => Deno.env.get(key)) : null;
+  if (provider === 'openrouter' && !pricePolicy) return null;
   for (const model of models) {
     try {
       const body: any = { model, messages, max_tokens: payload.max_tokens ?? 2048 };
+      if (pricePolicy) body.provider = pricePolicy;
       if (payload.temperature !== undefined) body.temperature = payload.temperature;
       if (payload.response_format?.type === 'json_object') body.response_format = payload.response_format;
       const resp = await cascadeFetch(url, {
@@ -510,8 +514,11 @@ async function callOpenRouter(payload: any): Promise<Response | null> {
 
   const key = Deno.env.get('OPENROUTER_API_KEY');
   if (!key) return null;
+  const provider = readFallbackPricePolicy(key => Deno.env.get(key));
+  if (!provider) return null;
   const body: any = {
     model: OPENROUTER_TEXT,
+    provider,
     messages: flattenMessages(payload.messages || []),
   };
   if (payload.temperature !== undefined) body.temperature = payload.temperature;
@@ -603,6 +610,8 @@ async function googleImage(prompt: string, inputImages: string[]): Promise<strin
 export async function openRouterImage(prompt: string, inputImages: string[]): Promise<string | null> {
   const key = Deno.env.get('OPENROUTER_API_KEY');
   if (!key) return null;
+  const provider = readFallbackPricePolicy(key => Deno.env.get(key), true);
+  if (!provider) return null;
   try {
     const content: any[] = [{ type: 'text', text: prompt }];
     for (const url of inputImages) content.push({ type: 'image_url', image_url: { url } });
@@ -616,6 +625,7 @@ export async function openRouterImage(prompt: string, inputImages: string[]): Pr
       },
       body: JSON.stringify({
         model: OPENROUTER_IMAGE,
+        provider,
         messages: [{ role: 'user', content }],
         modalities: ['image', 'text'],
       }),
