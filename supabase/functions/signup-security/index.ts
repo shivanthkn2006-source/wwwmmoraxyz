@@ -57,6 +57,7 @@ serve(async (req) => {
   // A verified pass is a scarce resource: at most 5 successful checks per hour
   // per address, so a solved-CAPTCHA reseller cannot mint accounts in bulk.
   const passes = await consumeRateLimit(`signup-verify:${guard.ip}`, 5, 3600);
+  if (passes.unavailable) return json({ ok: false, reason: 'temporarily_unavailable' }, 503);
   if (!passes.allowed) {
     console.warn('[signup-security] verification budget exhausted for one address');
     return json({ ok: false, reason: 'rate_limited' }, 429);
