@@ -32,6 +32,23 @@ async function ownedTables(db: any): Promise<string[]> {
 
 const STORAGE_BUCKETS = ['posts', 'avatars', 'vault'];
 
+const EXPORT_PAGE = 1000;
+/** Fail closed past 100k rows per table rather than silently truncate an export. */
+const EXPORT_MAX_PAGES = 100;
+
+// deno-lint-ignore no-explicit-any
+async function exportOwnedRows(db: any, table: string, userId: string): Promise<unknown[]> {
+  const rows: unknown[] = [];
+  for (let page = 0; page < EXPORT_MAX_PAGES; page++) {
+    const from = page * EXPORT_PAGE;
+    const { data, error } = await db.from(table).select('*').eq('user_id', userId).range(from, from + EXPORT_PAGE - 1);
+    if (error || !Array.isArray(data)) throw new Error('export page failed');
+    rows.push(...data);
+    if (data.length < EXPORT_PAGE) return rows;
+  }
+  throw new Error('export too large');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
