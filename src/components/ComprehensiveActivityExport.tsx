@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, FileText, Image as ImageIcon, Activity, Calendar, Users, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { fetchAllRows } from '@/lib/paginatedFetch';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -27,65 +28,67 @@ export const ComprehensiveActivityExport = () => {
 
     try {
       // Fetch user profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
+      if (profileError) throw new Error(`profile export failed: ${profileError.message}`);
 
-      // Fetch sessions
-      const { data: sessions } = await supabase
-        .from('user_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('started_at', { ascending: false });
-
-      // Fetch page views
-      const { data: pageViews } = await supabase
-        .from('page_views')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('entered_at', { ascending: false });
-
-      // Fetch activity log
-      const { data: activityLog } = await supabase
-        .from('user_activity_log')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      // Fetch posts
-      const { data: posts } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      // Fetch messages
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
+      // Page through every row: a plain select silently truncates at the
+      // server's max-rows, which would produce a quietly incomplete export.
+      const [sessions, pageViews, activityLog, posts, messages] = await Promise.all([
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('user_sessions').select('*').eq('user_id', user.id)
+              .order('started_at', { ascending: false }).range(from, to),
+          'sessions',
+        ),
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('page_views').select('*').eq('user_id', user.id)
+              .order('entered_at', { ascending: false }).range(from, to),
+          'page views',
+        ),
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('user_activity_log').select('*').eq('user_id', user.id)
+              .order('created_at', { ascending: false }).range(from, to),
+          'activity log',
+        ),
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('posts').select('*').eq('user_id', user.id)
+              .order('created_at', { ascending: false }).range(from, to),
+          'posts',
+        ),
+        fetchAllRows<any>(
+          (from, to) =>
+            supabase.from('messages').select('*')
+              .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+              .order('created_at', { ascending: false }).range(from, to),
+          'messages',
+        ),
+      ]);
 
       // Calculate statistics
       const stats = {
-        totalSessions: sessions?.length || 0,
-        totalPageViews: pageViews?.length || 0,
-        totalActivityLogs: activityLog?.length || 0,
-        totalPosts: posts?.length || 0,
-        totalMessages: messages?.length || 0,
+        totalSessions: sessions.length,
+        totalPageViews: pageViews.length,
+        totalActivityLogs: activityLog.length,
+        totalPosts: posts.length,
+        totalMessages: messages.length,
         accountCreated: profile?.created_at,
-        lastActivity: sessions?.[0]?.last_activity_at,
+        lastActivity: sessions[0]?.last_activity_at,
       };
 
       return {
         userInfo: profile,
-        sessions: sessions || [],
-        pageViews: pageViews || [],
-        activityLog: activityLog || [],
-        posts: posts || [],
-        messages: messages || [],
+        sessions,
+        pageViews,
+        activityLog,
+        posts,
+        messages,
         stats,
       };
     } catch (error) {
@@ -335,25 +338,32 @@ export const ComprehensiveActivityExport = () => {
   const handleExportImages = async () => {
     setLoading(true);
     try {
-      const { data: posts } = await supabase
-        .from('posts')
-        .select('media_url, media_type, created_at')
-        .eq('user_id', user?.id)
-        .eq('media_type', 'image')
-        .not('media_url', 'is', null);
+      const posts = await fetchAllRows<{ media_url: string | null; created_at: string }>(
+        (from, to) =>
+          supabase
+            .from('posts')
+            .select('media_url, media_type, created_at')
+            .eq('user_id', user?.id)
+            .eq('media_type', 'image')
+            .not('media_url', 'is', null)
+            .range(from, to),
+        'images',
+      );
 
-      if (!posts || posts.length === 0) {
+      if (posts.length === 0) {
         toast.info('No images found to download');
         return;
       }
 
       toast.success(`Found ${posts.length} images! Starting download...`);
 
-      // Download each image
+      // Download each image; count failures instead of silently skipping them
+      let failed = 0;
       for (const post of posts) {
         if (post.media_url) {
           try {
             const response = await fetch(post.media_url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -365,12 +375,17 @@ export const ComprehensiveActivityExport = () => {
             URL.revokeObjectURL(url);
             await new Promise(resolve => setTimeout(resolve, 500)); // Delay between downloads
           } catch (err) {
+            failed += 1;
             console.error('Failed to download image:', err);
           }
         }
       }
 
-      toast.success('Images downloaded successfully!');
+      if (failed > 0) {
+        toast.error(`${failed} of ${posts.length} images could not be downloaded. Please try again.`);
+      } else {
+        toast.success('Images downloaded successfully!');
+      }
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Failed to export images');

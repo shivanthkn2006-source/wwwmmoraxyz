@@ -11,17 +11,18 @@
 export const EXPORT_PAGE_SIZE = 1000;
 export const EXPORT_ROW_CEILING = 100_000;
 
-interface RangeCapable {
-  range(from: number, to: number): PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>;
+interface PageResult {
+  data: unknown[] | null;
+  error: { message: string } | null;
 }
 
 /**
  * Pages `queryFactory(from, to)` until a short page arrives.
- * `queryFactory` must return a fresh query each call (supabase builders are
- * single-use once awaited).
+ * `queryFactory` must return a fresh, ranged query each call (supabase
+ * builders are single-use once awaited).
  */
 export async function fetchAllRows<T = Record<string, unknown>>(
-  queryFactory: (from: number, to: number) => RangeCapable,
+  queryFactory: (from: number, to: number) => PromiseLike<PageResult>,
   label = 'export',
 ): Promise<T[]> {
   const rows: T[] = [];
