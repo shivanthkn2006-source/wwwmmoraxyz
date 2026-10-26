@@ -251,7 +251,13 @@ export const useCDSPPaymentRails = () => {
       return { success: true, transactionId };
 
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Payment failed';
+      // PostgREST/RPC failures are plain objects with a message, not Error
+      // instances — read both so members see the real reason.
+      const errorMsg = error instanceof Error
+        ? error.message
+        : (typeof error === 'object' && error !== null && 'message' in error
+            ? String((error as { message: unknown }).message)
+            : 'Payment failed');
       console.error('[CDSP-PaymentRails] Payment error:', error);
       
       setState(prev => ({ ...prev, isProcessing: false, lastError: errorMsg }));

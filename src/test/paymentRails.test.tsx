@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   from: vi.fn(),
