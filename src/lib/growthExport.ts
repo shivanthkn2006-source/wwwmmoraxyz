@@ -8,6 +8,7 @@
  * and no temporary public link.
  */
 import { safeCsvCell } from './csvSafe';
+import { fetchAllRows } from './paginatedFetch';
 import { supabase } from '@/integrations/supabase/client';
 
 export type GrowthExportFormat = 'json' | 'csv';
