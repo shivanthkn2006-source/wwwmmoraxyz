@@ -95,9 +95,13 @@ async function paintSkit(db: ReturnType<typeof createClient>, row: { id: string;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  // Public endpoint (scheduled jobs call it without a member token): rate-limit through the shared WAF.
+  // Rate-limit through the shared WAF, then require the scheduler token or an
+  // admin: generation spends paid image/inference budget, so anonymous callers
+  // must never trigger it.
   const guard = await publicGuard(req, { name: 'generate-humor-drops', limit: 30, windowSeconds: 60 });
   if (guard.response) return guard.response;
+  const cron = await requireCronOrAdmin(req, 'generate-humor-drops');
+  if (cron instanceof Response) return cron;
   const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   try {
     const db = createClient(URL, SERVICE, { auth: { persistSession: false } });
