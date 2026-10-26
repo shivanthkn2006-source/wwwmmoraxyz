@@ -305,3 +305,8 @@
 - [x] Fixed edit-image payload field (imageBase64) in PremiumImageGeneration + Webdrop
 - [x] Home dock: dev harnesses excluded, 5-column phone layout (verified 390px, 5 cols, 279px panel, no errors)
 - [x] Full suite 1,682 passed / 0 failed / 6 skipped (hosted RLS still needs isolated backend)
+
+## Oct 26 — documents hub plan + #7 AI authority + humanish trial
+- [x] Documents/legal plan delivered (MMora_Documents_Hub_Plan_2026-10-26.md): full inventory, country requirements, staged Documents Center -> drafts -> docs subdomain -> sitemap report. Build awaits approval + operator facts (legal entity, grievance officer, contacts).
+- [x] #7 AI authority: 7 functions bound body userId to verified caller (bindOwner), zoe-realtime-voice anonymous inference closed (401), ai-companion-chat member gate explicit; 11 new tests; full suite 1,754/0/6; 9 functions deployed; v19 updated. Open: pre-inference budget, WAF fail-open, price-capped routing (operator decisions).
+- [x] humanish validated: installs on Node 22.23, doctor + free dry-run pass. Real study blocked on paid E2B + OpenAI keys and an isolated backend (single backend serves preview+published; no /dev/kvm for local VMs).

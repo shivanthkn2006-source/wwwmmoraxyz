@@ -11,6 +11,7 @@ import {
 } from "../_shared/ai-telemetry.ts";
 import { cascadeInfer, hardenZoeIdentity } from "../_shared/cascading-provider.ts";
 import { clientErrorResponse } from '../_shared/client-error.ts';
+import { requireCaller } from '../_shared/caller-guard.ts';
 
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant', 'system']),
@@ -26,6 +27,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  // Signed-in members only: this spends paid AI/provider budget.
+  const __caller = await requireCaller(req, 'member');
+  if (__caller instanceof Response) return __caller;
 
   try {
     const body = await req.json();

@@ -1,5 +1,5 @@
 import { cascadeFetch } from '../_shared/image-cascade.ts';
-import { requireCaller } from '../_shared/caller-guard.ts';
+import { requireCaller, bindOwner } from '../_shared/caller-guard.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { sovereignKey } from "../_shared/sovereign-ai.ts";
@@ -46,7 +46,9 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { prompt, model, generateImage, userId } = requestSchema.parse(body);
+    const { prompt, model, generateImage, userId: requestedUserId } = requestSchema.parse(body);
+    // Usage attribution is always the verified caller, never a body-supplied id.
+    const userId = bindOwner(caller, requestedUserId);
 
     if (!prompt) {
       throw new Error('Prompt is required');
