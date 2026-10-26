@@ -1,8 +1,9 @@
 # Privacy repair — 26 October 2026
 ## Resumed Oct 26 — #7 safeguards and uploaded plans
-- [ ] Trace counter-store failures and fallback pricing; repair confirmed gaps with mocked dependencies only, no internal requests or inference.
-- [ ] Review both uploaded documents one by one; revise v19 with observed results separate from hosted/operator blockers.
-- [ ] Keep new document/service destinations temporarily on myzoe.xyz / www.myzoe.xyz; no domain publication or identity changes in this audit.
+- [x] Counter failures/malformed counts fail closed (503); action rotation shares aggregate bucket; both OpenRouter routers require operator-owned token/request ceilings, plus image ceiling for generation. 22 new controlled tests; 42 focused passes; final suite 1,779 passed / 0 failed / 6 hosted skips; latest build OK. No hosted requests, deployment, paid jobs or member writes.
+- [x] Reviewed both attachments: ten hub and six checklist editorial corrections; preserved originals, saved v20 checklist and v2 hub plan with observed/hosted/operator distinctions. Added both to Platform audits (68 members, new uploads pending).
+- [x] Recorded temporary myzoe.xyz / www.myzoe.xyz destinations; no domain publication, routing or identity changes in this audit.
+- [ ] Atomic cross-provider spend reservations, actual-model/unknown-usage accounting, model/modality approval and budgets await operator policy; deployment/upstream price-filter proof needs a separately authorized hosted stage. Document publication waits on operator contacts/country/age/access decisions. Humanish and six privacy cases still require isolated backend/identities (humanish also paid provider keys).
 - [x] Reject discovery/export query errors; block login removal on configured cleanup errors, full storage pages and directories; truthful inline error states.
 - [x] Twenty mock-only handler/UI tests passed; cache-bypassed current-source desktop/phone errors inspected, no logout/page errors/overflow.
 - [x] Export pagination fixed: pages through all rows (1k pages), fails closed past 100k rows/table instead of silent 5,000-row truncation; 18 handler tests; account-data deployed (SHA 00089337…).
