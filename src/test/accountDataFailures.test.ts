@@ -11,7 +11,7 @@ const MEMBER_TABLES = [
  { table_name: 'mail', member_column: 'recipient_id' },
 ];
 
-function fixture(failure: Failure, signedIn = true, rowCount = 0) {
+function fixture(failure: Failure, signedIn = true, rowCount = 0, topLevelFiles = 1) {
  let handler: ((req: Request) => Promise<Response>) | undefined;
  const targets: string[] = [];
  const removedPaths: string[] = [];
