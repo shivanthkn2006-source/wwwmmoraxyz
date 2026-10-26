@@ -54,6 +54,7 @@ import { PlatformLayout } from "@/layouts/PlatformLayout";
 import EarnedRoute from "@/components/access/EarnedRoute";
 import { reportPlatformError } from "@/lib/enterpriseTelemetry";
 import { markStartupPhase } from "@/lib/startupTiming";
+import { isPublicDocumentRoute } from '@/lib/publicDocumentRoutes';
 
 
 // Lazy load pages for code splitting and faster initial load
@@ -158,6 +159,7 @@ const AstrologyPage = lazy(() => import("./pages/AstrologyPage")); // MEMBER AST
 const PrivacyDataPage = lazy(() => import("./pages/PrivacyDataPage")); // EXPORT / DELETE MY DATA
 const TermsPage = lazy(() => import("./pages/TermsPage"));
 const DataPolicyPage = lazy(() => import("./pages/DataPolicyPage"));
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const VaultGate = lazy(() => import("./components/admin/VaultGate"));
 const SiteMapPage = lazy(() => import("./pages/SiteMapPage"));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
@@ -453,7 +455,7 @@ const VoiceRuntimeGate = ({ children }: { children: React.ReactNode }) => {
     pathname.startsWith('/password-recovery');
 
   // Never mount voice overlays on auth routes.
-  if (isAuth) return null;
+  if (isAuth || isPublicDocumentRoute(pathname)) return null;
   return <>{children}</>;
 };
 
@@ -466,7 +468,7 @@ const RouteAwareShell = () => {
   // These routes bypass the heavy provider tree for pure isolation
   const isRootPreAuth = pathname === '/' && (loading || !user);
   const isLightRoute =
-    isRootPreAuth ||
+    isRootPreAuth || isPublicDocumentRoute(pathname) ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
@@ -503,6 +505,12 @@ const RouteAwareShell = () => {
             <Routes>
               <Route path="/access-denied" element={<AccessDeniedScreen />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/data-policy" element={<DataPolicyPage />} />
+              <Route path="/help" element={<HelpPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/map" element={<SiteMapPage />} />
               <Route path="/signup" element={<AuthPage />} />
               <Route path="/welcome" element={<LandingPage />} />
               <Route path="/demo" element={<DemoPage />} />
@@ -1507,7 +1515,6 @@ const App = () => {
                     <TooltipProvider>
                       <Toaster />
                       <Sonner />
-                      <MandatoryLoaderGate />
                       <AfterAuthIdle delayMs={8000} pauseInVR>
                         <InstallPrompt />
                         <GuardianInterventionOverlay />
@@ -1519,6 +1526,7 @@ const App = () => {
                       </Suspense>
 
                       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                        <MandatoryLoaderGate />
 
                         {/* Sandboxed M'Mora Zoe overlay layer — inside the router so it
                             can stay on the home feed and never cover other pages. */}

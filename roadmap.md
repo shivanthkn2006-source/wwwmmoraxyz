@@ -1,4 +1,9 @@
 # Privacy repair — 26 October 2026
+## Oct 26 — attachment continuation and #7 closure checklist
+- [x] Public-only /documents index built from identical second/third plans; nine entries, five pending; private Files unserved. Public paths use light shell, skip fixed loader/member warming. Root/auth untouched; no publication.
+- [x] Controlled #7 regressions rerun (42); document/route checks total 65; full suite 1,784 passed/0 failed/6 skipped. Static inventory: 134 page files, 182 entrypoints, 143 canonical routes. Fourteen public desktop/phone views plus filter/link flows inspected with external transports blocked; zero page errors/overflow.
+- [x] v21 checklist and v3 hub completion report created; public HTTPS HEAD verifies myzoe 302 to mmora, domain tool inventory conflicts. No routing/DNS changes. Next safe stage: controlled deferred-initializer failure isolation and actual-model/unknown-usage accounting trace.
+- [ ] Outside completion blockers: Marc's budgets/models/failure policy and legal contacts/country/age/retention/erasure decisions; isolated backend/identities; separately permitted hosted deployment/provider proof; domain inventory/hosting settings and real-device benchmarks. No platform-wide zero-bug or cost-savings claim.
 ## Resumed Oct 26 — #7 safeguards and uploaded plans
 - [x] Counter failures/malformed counts fail closed (503); action rotation shares aggregate bucket; both OpenRouter routers require operator-owned token/request ceilings, plus image ceiling for generation. 22 new controlled tests; 42 focused passes; final suite 1,779 passed / 0 failed / 6 hosted skips; latest build OK. No hosted requests, deployment, paid jobs or member writes.
 - [x] Reviewed both attachments: ten hub and six checklist editorial corrections; preserved originals, saved v20 checklist and v2 hub plan with observed/hosted/operator distinctions. Added both to Platform audits (68 members, new uploads pending).

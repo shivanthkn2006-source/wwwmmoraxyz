@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import IconOrbitLoader from '@/components/core/IconOrbitLoader';
 import { useAuth } from '@/lib/auth';
+import { useLocation } from 'react-router-dom';
+import { isPublicDocumentRoute } from '@/lib/publicDocumentRoutes';
 
 const HOLD_MS = 5000;
 
@@ -9,6 +11,7 @@ const HOLD_MS = 5000;
  * app open/reload and again on every sign-in, with a new symbol set each time.
  */
 export default function MandatoryLoaderGate() {
+  const { pathname } = useLocation();
   const { user } = useAuth();
   const [round, setRound] = useState(1);
   const [visible, setVisible] = useState(true);
@@ -26,7 +29,7 @@ export default function MandatoryLoaderGate() {
     return () => window.clearTimeout(t);
   }, [visible, round]);
 
-  if (!visible) return null;
+  if (!visible || isPublicDocumentRoute(pathname)) return null;
   return (
     <div data-testid="mandatory-loader" className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-background" aria-busy="true">
       <IconOrbitLoader key={round} fresh />

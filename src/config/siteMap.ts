@@ -66,6 +66,7 @@ const PURPOSE: Record<string, string> = {
   '/install': 'Put M\u2019Mora on your phone home screen.',
   '/help': 'Short guides for getting started.',
   '/map': 'Every page in M\u2019Mora, grouped and explained.',
+  '/documents': 'Public policies and country notices.',
   '/bug-report': 'Tell us something is broken.',
   '/notification-preferences': 'Choose what you get told about.',
   '/notification-history': 'Everything we have sent you.',
@@ -76,7 +77,7 @@ const PURPOSE: Record<string, string> = {
 
 const AREA_RULES: Array<[SiteArea, (p: string) => boolean]> = [
   ['Admin', (p) => p.startsWith('/admin') || p.startsWith('/god-mode') || p === '/sentinel' || p === '/security' || p === '/attack-response' || p === '/root-scan' || p === '/platform-audit'],
-  ['Start', (p) => ['/', '/auth', '/voice-auth', '/about', '/install', '/beta', '/help', '/map', '/terms', '/data-policy'].includes(p)],
+  ['Start', (p) => ['/', '/auth', '/voice-auth', '/about', '/install', '/beta', '/help', '/map', '/documents', '/terms', '/data-policy'].includes(p)],
   ['Daily', (p) => ['/home', '/mosaic', '/selfie-city', '/universal-timeline', '/compass'].includes(p)],
   ['Create', (p) => ['/camera', '/quantum-camera', '/webdrop', '/merchant'].includes(p)],
   ['Connect', (p) => p.startsWith('/chat') || p.startsWith('/profile') || ['/huddle', '/exodus', '/exodus-map'].includes(p)],

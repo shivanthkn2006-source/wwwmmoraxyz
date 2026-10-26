@@ -6,7 +6,7 @@ export default function PublicInfoFooter() {
       <nav aria-label="M'Mora information" className="flex flex-wrap gap-x-4">
         {[
           ['Sign in', '/auth'], ['About', '/about'], ['Terms', '/terms'],
-          ['Privacy', '/data-policy'], ['Help', '/help'], ['Site map', '/map'],
+          ['Privacy', '/data-policy'], ['Help', '/help'], ['Site map', '/map'], ['Documents', '/documents'],
         ].map(([label, to]) => (
           <Link key={to} to={to} className="inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
             {label}
