@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, FileText, Image as ImageIcon, Activity, Calendar, Users, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { fetchAllRows } from '@/lib/paginatedFetch';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -337,25 +338,32 @@ export const ComprehensiveActivityExport = () => {
   const handleExportImages = async () => {
     setLoading(true);
     try {
-      const { data: posts } = await supabase
-        .from('posts')
-        .select('media_url, media_type, created_at')
-        .eq('user_id', user?.id)
-        .eq('media_type', 'image')
-        .not('media_url', 'is', null);
+      const posts = await fetchAllRows<{ media_url: string | null; created_at: string }>(
+        (from, to) =>
+          supabase
+            .from('posts')
+            .select('media_url, media_type, created_at')
+            .eq('user_id', user?.id)
+            .eq('media_type', 'image')
+            .not('media_url', 'is', null)
+            .range(from, to),
+        'images',
+      );
 
-      if (!posts || posts.length === 0) {
+      if (posts.length === 0) {
         toast.info('No images found to download');
         return;
       }
 
       toast.success(`Found ${posts.length} images! Starting download...`);
 
-      // Download each image
+      // Download each image; count failures instead of silently skipping them
+      let failed = 0;
       for (const post of posts) {
         if (post.media_url) {
           try {
             const response = await fetch(post.media_url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -367,12 +375,17 @@ export const ComprehensiveActivityExport = () => {
             URL.revokeObjectURL(url);
             await new Promise(resolve => setTimeout(resolve, 500)); // Delay between downloads
           } catch (err) {
+            failed += 1;
             console.error('Failed to download image:', err);
           }
         }
       }
 
-      toast.success('Images downloaded successfully!');
+      if (failed > 0) {
+        toast.error(`${failed} of ${posts.length} images could not be downloaded. Please try again.`);
+      } else {
+        toast.success('Images downloaded successfully!');
+      }
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Failed to export images');
