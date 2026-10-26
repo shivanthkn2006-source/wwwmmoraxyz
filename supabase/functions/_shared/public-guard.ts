@@ -77,7 +77,7 @@ export async function publicGuard(req: Request, options: WafOptions): Promise<Pu
 
   if (await isSentinelBlockedIp(ip)) return deny('sentinel_block', 403);
 
-  const scope = options.scope ?? new URL(req.url).searchParams.get('action') ?? req.method.toLowerCase();
+  const scope = options.scope ?? 'default';
   const { allowed, remaining, unavailable } = await consumeRateLimit(
     `${options.name}:${scope.slice(0, 32)}:${ip}`,
     options.limit,

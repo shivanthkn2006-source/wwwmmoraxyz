@@ -267,7 +267,7 @@ export async function guardRequest(req: Request, options: WafOptions): Promise<W
     }
   }
 
-  const scope = options.scope ?? (typeof body.action === 'string' ? body.action.slice(0, 32) : 'default');
+  const scope = options.scope ?? 'default';
   const { allowed, remaining, unavailable } = await consumeRateLimit(
     `${options.name}:${scope}:${ip}`,
     options.limit,

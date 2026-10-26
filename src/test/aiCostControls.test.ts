@@ -5,7 +5,9 @@ import ts from 'typescript';
 import { readFallbackPricePolicy } from '../../supabase/functions/_shared/fallback-price-policy';
 
 function load(file: string, globals: Record<string, unknown> = {}) {
-  const source = readFileSync(`supabase/functions/_shared/${file}.ts`, 'utf8').replace(/^import\s[\s\S]*?;\s*$/gm, '').replace(/\bexport /g, '');
+  const original = readFileSync(`supabase/functions/_shared/${file}.ts`, 'utf8');
+  const names = [...original.matchAll(/export (?:async )?(?:function|const) (\w+)/g)].map(match => match[1]);
+  const source = original.replace(/^import\s[\s\S]*?;\s*$/gm, '').replace(/\bexport /g, '') + `\nObject.assign(globalThis, {${names.join(',')}});`;
   const context = vm.createContext({ Request, Response, Headers, Date, console: { log() {}, warn() {} }, ...globals });
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText, context);
   return context;
@@ -44,6 +46,17 @@ describe('counter-store failures never authorize work', () => {
     }
     expect(work).not.toHaveBeenCalled();
   });
+  it('rotating POST or GET actions cannot fragment the aggregate counter', async () => {
+    const { context, rpc } = waf({ data: 1 });
+    context.isSentinelBlockedIp = async () => false;
+    const globals = Object.fromEntries(['guardRequest', 'wafClientIp', 'readCloudflareSignals', 'evaluateCloudflareRules', 'consumeRateLimit', 'wafCorsHeaders'].map(key => [key, context[key]]));
+    const pub = load('public-guard', { ...globals, isSentinelBlockedIp: async () => false, recordWafThreat: async () => {} });
+    for (const method of ['POST', 'GET']) for (const action of ['first', 'second']) {
+      await pub.publicGuard(new Request(`https://mock.test/?action=${action}`, { method, headers: { 'user-agent': 'Browser' }, ...(method === 'POST' ? { body: JSON.stringify({ action }) } : {}) }), { name: 'mock', limit: 5, windowSeconds: 60 });
+    }
+    expect(rpc).toHaveBeenCalledTimes(4);
+    for (const call of rpc.mock.calls) expect((call as unknown as [string, { _bucket: string }])[1]._bucket).toBe('mock:default:unknown');
+  });
 });
 
 describe('OpenRouter auto requires operator price ceilings', () => {
@@ -63,7 +76,7 @@ describe('OpenRouter auto requires operator price ceilings', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
   it('sends configured ceilings in the real fallback request', async () => {
-    const fetch = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: 'mock reply' } }] })));
+    const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ choices: [{ message: { content: 'mock reply' } }] })));
     const ctx = load('cascading-provider', { readFallbackPricePolicy, setTimeout: () => 0, Deno: { env: { get: (key: string) => key === 'OPENROUTER_API_KEY' ? 'mock' : approved[key as keyof typeof approved] } }, fetch });
     expect((await ctx.callOpenRouter([], {})).content).toBe('mock reply');
     expect(JSON.parse(fetch.mock.calls[0]?.[1]?.body as string).provider).toEqual({ max_price: { prompt: 0.17, completion: 0.29, request: 0 } });
