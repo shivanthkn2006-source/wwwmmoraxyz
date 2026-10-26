@@ -70,6 +70,18 @@ describe('privacy completion failures execute the unchanged entrypoint imports w
  it('returns a successful empty export when queries succeed', async () => {
   const f = fixture('none'); expect((await (await f.run('export')).json()).ok).toBe(true); expect(f.login).not.toHaveBeenCalled();
  });
+ it('exports every row across pages instead of truncating at one page', async () => {
+  const f = fixture('none', true, 5200); const body = await (await f.run('export')).json();
+  expect(body.ok).toBe(true); expect(body.data.fixture).toHaveLength(5200);
+ });
+ it('fails closed when a later export page fails', async () => {
+  const f = fixture('table-export-page2', true, 2500); const response = await f.run('export');
+  expect(response.status).toBe(503); expect((await response.json()).ok).toBe(false); expect(f.login).not.toHaveBeenCalled();
+ });
+ it('fails closed instead of truncating an export past the page ceiling', async () => {
+  const f = fixture('none', true, 100_500); const response = await f.run('export');
+  expect(response.status).toBe(503); expect((await response.json()).ok).toBe(false);
+ });
  it('requires a signed-in caller', async () => {
   const f = fixture('none', false); const response = await f.run('delete'); expect(response.status).toBe(401); await response.text(); expect(f.login).not.toHaveBeenCalled();
  });
