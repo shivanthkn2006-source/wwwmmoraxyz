@@ -55,3 +55,22 @@ describe('AI authority: no anonymous paid inference', () => {
     expect(s).toContain('if (__caller instanceof Response) return __caller;');
   });
 });
+
+describe('AI authority: schedulers and status probes are not anonymously triggerable', () => {
+  it('execute-scheduled-macros requires the scheduler token or admin', () => {
+    const s = src('execute-scheduled-macros');
+    expect(s).toContain("requireCronOrAdmin(req, 'execute-scheduled-macros')");
+  });
+
+  it('generate-humor-drops requires the scheduler token or admin', () => {
+    const s = src('generate-humor-drops');
+    expect(s).toContain("requireCronOrAdmin(req, 'generate-humor-drops')");
+  });
+
+  it('zoe-api-status requires a member and restricts live probes to admins', () => {
+    const s = src('zoe-api-status');
+    expect(s).toContain("requireCaller(req, 'member')");
+    expect(s).toContain("caller.kind === 'service' || caller.isAdmin");
+    expect(s).toContain('mayProbe &&');
+  });
+});
