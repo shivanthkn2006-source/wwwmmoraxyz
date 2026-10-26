@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/auth';
 import { HUMOR_CATEGORIES, HUMOR_CATEGORY_LABELS, type HumorCategory } from '@/lib/humor';
+import { useAutosaveDraft } from '@/hooks/useAutosaveDraft';
 import { supabase } from '@/integrations/supabase/client';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
