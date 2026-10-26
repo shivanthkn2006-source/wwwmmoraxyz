@@ -31,6 +31,20 @@ export default function HomePostEditor({ open, busy, onOpenChange, onSubmit }: H
   const previews = useMemo(() => files.map((file) => ({ file, url: URL.createObjectURL(file) })), [files]);
   useEffect(() => () => previews.forEach(({ url }) => URL.revokeObjectURL(url)), [previews]);
 
+  const { clearDraft } = useAutosaveDraft({
+    surface: 'home-post',
+    values: { title, text, tags },
+    files,
+    enabled: open,
+    onRestore: (draft) => {
+      setTitle(draft.values.title ?? '');
+      setText(draft.values.text ?? '');
+      setTags(draft.values.tags ?? '');
+      if (draft.files.length) setFiles(draft.files.slice(0, 10));
+      toast.success('Your draft was restored.');
+    },
+  });
+
   const reset = () => {
     setTitle('');
     setText('');

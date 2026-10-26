@@ -24,6 +24,20 @@ export default function SubmitJokePage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const { clearDraft } = useAutosaveDraft({
+    surface: 'submit-joke',
+    values: { title, text, category },
+    files: file ? [file] : [],
+    enabled: true,
+    onRestore: (draft) => {
+      setTitle(draft.values.title ?? '');
+      setText(draft.values.text ?? '');
+      if (HUMOR_CATEGORIES.includes(draft.values.category as HumorCategory)) setCategory(draft.values.category as HumorCategory);
+      if (draft.files[0]) setFile(draft.files[0]);
+      toast.success('Your draft was restored.');
+    },
+  });
+
   const publish = async () => {
     const headline = title.trim();
     const body = text.trim();
