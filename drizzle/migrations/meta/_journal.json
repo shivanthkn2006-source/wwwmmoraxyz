@@ -78,6 +78,13 @@
       "when": 1792999530636,
       "tag": "0010_list_member_tables_for_account_data",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793003241305,
+      "tag": "0011_spend_credits",
+      "breakpoints": true
     }
   ]
 }
