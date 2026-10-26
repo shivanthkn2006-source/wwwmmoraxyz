@@ -305,3 +305,8 @@
 - [x] Fixed edit-image payload field (imageBase64) in PremiumImageGeneration + Webdrop
 - [x] Home dock: dev harnesses excluded, 5-column phone layout (verified 390px, 5 cols, 279px panel, no errors)
 - [x] Full suite 1,682 passed / 0 failed / 6 skipped (hosted RLS still needs isolated backend)
+
+## Oct 26 — documents hub plan + #7 AI authority + humanish trial
+- [ ] Documents/legal plan: single organized documents page (India/Singapore/US terms, privacy, copyright), later split to separate domain for lighter main-domain loads; plan first, build only after approval.
+- [ ] #7 AI authority and cost controls: trace claim verification before paid inference, rate limits/budgets/model routing; fix confirmed gaps with controlled mocks only; update v19.
+- [ ] humanish trial: install and validate (MIT, synthetic UI users); real study requires E2B + OpenAI keys and an isolated backend — flag blockers, no production targeting.
