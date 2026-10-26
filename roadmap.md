@@ -1,7 +1,10 @@
 # Privacy repair — 26 October 2026
 - [x] Reject discovery/export query errors; block login removal on configured cleanup errors, full storage pages and directories; truthful inline error states.
 - [x] Twenty mock-only handler/UI tests passed; cache-bypassed current-source desktop/phone errors inspected, no logout/page errors/overflow.
-- [ ] Hosted deployment/rights-flow verification not performed (controlled mocks only). Complete pagination/ownership/storage inventory, shared-message policy and retention/vendor decisions remain blockers.
+- [x] Export pagination fixed: pages through all rows (1k pages), fails closed past 100k rows/table instead of silent 5,000-row truncation; 18 handler tests; account-data deployed (SHA 00089337…).
+- [x] Offline draft autosave shipped: localStorage+IndexedDB drafts for Home post editor and joke page (600ms debounce, 7-day TTL, 25MB file cap, clear on publish/cancel); 9 tests; signed-in desktop/phone reload-restore visually verified.
+- [x] Ads/monetization report delivered (MMora_Ads_Monetization_Report_2026-10-26.md): first-party sponsorship inventory, contextual zero-tracking networks vs AdSense, location-based legal duties, staged plan; no ad code added.
+- [ ] Hosted deployment/rights-flow verification not performed (controlled mocks only). Recursive storage cleanup, shared-message policy and retention/vendor decisions remain blockers. Next code-safe stage: recursive paginated storage cleanup or #6 payments trace.
 
 # M'Mora Village roadmap
 
