@@ -4,7 +4,9 @@
 - [x] Export pagination fixed: pages through all rows (1k pages), fails closed past 100k rows/table instead of silent 5,000-row truncation; 18 handler tests; account-data deployed (SHA 00089337…).
 - [x] Offline draft autosave shipped: localStorage+IndexedDB drafts for Home post editor and joke page (600ms debounce, 7-day TTL, 25MB file cap, clear on publish/cancel); 9 tests; signed-in desktop/phone reload-restore visually verified.
 - [x] Ads/monetization report delivered (MMora_Ads_Monetization_Report_2026-10-26.md): first-party sponsorship inventory, contextual zero-tracking networks vs AdSense, location-based legal duties, staged plan; no ad code added.
-- [ ] Hosted deployment/rights-flow verification not performed (controlled mocks only). Recursive storage cleanup, shared-message policy and retention/vendor decisions remain blockers. Next code-safe stage: recursive paginated storage cleanup or #6 payments trace.
+- [x] Recursive paginated storage cleanup: nested folders and 1,000+ file folders no longer block erasure forever; recursive walker (100-entry pages, 100-object batches, depth/object ceilings) fails closed with login kept on any error.
+- [x] Ownership tracing fixed: new service-role-only list_member_tables() covers 15 tables keyed on sender/recipient/owner-style columns (messages, friend_requests, friendships, user_relationships, artifact_transfers, zoe_infinity_mail, etc.); export dedupes multi-column matches, deletion scoped to caller id on every column. 26 privacy tests pass; full suite 1,733 passed / 0 failed / 6 skipped; account-data deployed (SHA e0899b6b…). v18 checklist saved.
+- [ ] Hosted deployment/rights-flow verification not performed (controlled mocks only). Shared-content erasure policy (delete vs anonymize received messages), secondary export caps (growth/activity 1,000-row limits) and retention/vendor decisions remain open. Next code-safe stage: secondary export pagination or #6 payments trace.
 
 # M'Mora Village roadmap
 
