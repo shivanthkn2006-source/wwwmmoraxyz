@@ -59,7 +59,7 @@ export async function reserveInference(opts: {
 
 /** Run inference only after a successful hold; settle on success, release on failure. */
 export async function withReservation<T>(store: BudgetStore, verdict: BudgetVerdict, run: () => Promise<{ value: T; actualUsd: number }>): Promise<T> {
-  if (!verdict.ok) throw new Error(verdict.reason);
+  if (verdict.ok === false) throw new Error(verdict.reason);
   try {
     const { value, actualUsd } = await run();
     await store.settle(verdict.reservationId, Math.min(actualUsd, verdict.reservedUsd));
