@@ -15,6 +15,6 @@ describe('generate-text model allowlist', () => {
   });
 
   it('checks the request before any AI call', () => {
-    expect(src.indexOf('requestSchema.parse(body)')).toBeLessThan(src.indexOf('fetch('));
+    expect(src.indexOf('requestSchema.parse(body)')).toBeLessThan(src.indexOf('model: selectedModel'));
   });
 });
