@@ -7,7 +7,8 @@ describe('public document boundaries', () => {
     for (const id of ['india', 'singapore', 'us']) {
       const doc = PUBLIC_DOCUMENTS.find(item => item.id === id);
       expect(doc?.status).toBe('Draft for review');
-      expect(doc?.summary?.some(p => p.includes('[to be confirmed]'))).toBe(true);
+      expect(doc?.summary?.some(p => p.includes('Shivanth KN'))).toBe(true);
+      expect(doc?.summary?.some(p => p.includes('draft until legal review'))).toBe(true);
       expect(doc?.href).toBeUndefined();
     }
   });
