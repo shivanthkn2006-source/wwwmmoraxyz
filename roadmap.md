@@ -1,4 +1,8 @@
 # Privacy repair — 26 October 2026
+## Oct 27 — attached technical gaps and legal/domain continuation
+- [ ] Investigate current Project monitoring scheduler-authority finding with local source and controlled tests only; preserve all authentication gates.
+- [ ] Repair confirmed deferred-initializer failure isolation and safe AI gaps; retest without backend requests, paid jobs, deployment or publication.
+- [ ] Revise v21 evidence and legal/domain completion checklist; separate source/mocked proof from hosted, operator, device and legal blockers.
 ## Oct 26 — attachment continuation and #7 closure checklist
 - [x] Public-only /documents index built from identical second/third plans; nine entries, five pending; private Files unserved. Public paths use light shell, skip fixed loader/member warming. Root/auth untouched; no publication.
 - [x] Controlled #7 regressions rerun (42); document/route checks total 65; full suite 1,784 passed/0 failed/6 skipped. Static inventory: 134 page files, 182 entrypoints, 143 canonical routes. Fourteen public desktop/phone views plus filter/link flows inspected with external transports blocked; zero page errors/overflow.
