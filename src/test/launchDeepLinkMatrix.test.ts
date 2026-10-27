@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
-import { publicDocuments } from '@/config/publicDocuments';
+import { PUBLIC_DOCUMENTS as publicDocuments } from '@/config/publicDocuments';
 
 const app = readFileSync('src/App.tsx', 'utf8');
 const bridge = readFileSync('supabase/functions/zoe-matter-bridge/index.ts', 'utf8');
