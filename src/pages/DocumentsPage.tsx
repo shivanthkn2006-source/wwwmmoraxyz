@@ -36,6 +36,7 @@ export default function DocumentsPage() {
               <div className="min-w-0 space-y-2">
                 <p className="text-xs text-muted-foreground">{doc.category} · {doc.region}</p>
                 {doc.href ? <Link to={doc.href} className="inline-flex min-h-8 items-center gap-2 font-medium underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">{doc.title}<ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" /></Link> : <h2 className="font-medium">{doc.title}</h2>}
+                {doc.summary && <details className="text-sm"><summary className="cursor-pointer underline underline-offset-4">Read notice</summary><ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">{doc.summary.map(point => <li key={point}>{point}</li>)}</ul></details>}
                 {doc.updated && <p className="text-xs text-muted-foreground">Updated {doc.updated}</p>}
               </div>
               <span className="max-w-24 shrink-0 pt-1 text-right text-xs text-muted-foreground">{doc.status}</span>
