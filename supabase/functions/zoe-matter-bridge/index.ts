@@ -812,8 +812,11 @@ const ACTION_REGISTRY: Map<string, MatterAction> = new Map([
       };
     },
     execute: async (params, supabase, context) => {
+      // Free launch: no real-money checkout exists, so never record a payment as executed.
+      if (params) throw new Error('PAYMENTS_DISABLED: real-money payments are not available during the free launch');
       const { amount, recipient, description, method = 'stripe' } = params;
       const numAmount = parseFloat(amount);
+      
       
       // Log the payment (would integrate with actual payment API)
       const { data, error } = await supabase
