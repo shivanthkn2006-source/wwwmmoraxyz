@@ -8,6 +8,7 @@ import { ShapeShifterProvider } from "./contexts/ShapeShifterContext"; // PROTOC
 import { AutoHealProvider } from "./contexts/AutoHealContext"; // PROTOCOL AUTO-HEAL
 import SystemFailureBoundary from "@/components/SystemFailureBoundary";
 import { HelmetProvider } from "react-helmet-async";
+import { runDeferredInitializers } from "./lib/deferredInitialization";
 
 // Expose APP_VERSION + safe env to the startup shell so its diagnostics
 // panel and integration health checks can read Supabase URL/key without
@@ -66,7 +67,9 @@ window.addEventListener('unhandledrejection', (ev) => {
 });
 
 // Render the app FIRST so the startup shell can mark booted ASAP.
-createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root");
+if (!rootElement) throw new Error('Application root is missing');
+createRoot(rootElement).render(
   <SystemFailureBoundary>
     <HelmetProvider>
       <ShapeShifterProvider>
@@ -100,32 +103,28 @@ try {
 // Import diagnostics, compatibility and background systems only after the app
 // has painted. Static imports here previously delayed every device before React
 // could remove the startup screen, especially over cellular connections.
-const deferredInit = async () => {
-  const [compat, safari, purge, preloader, voices, swGuard, issues, perf, media] = await Promise.all([
-    import('./utils/crossBrowserCompat'),
-    import('./utils/safariBrowserFixes'),
-    import('@/lib/platformPurge'),
-    import('@/lib/idleRoutePreloader'),
-    import('./utils/assistantVoice'),
-    import('@/lib/serviceWorkerDevGuard'),
-    import('@/features/zoe-godmode/runtimeIssueCollector'),
-    import('@/utils/perfLogger'),
-    import('@/lib/mediaTrackRegistry'),
-  ]);
-  compat.initCrossBrowserCompat();
-  safari.initSafariFixes();
-  purge.truncateConsoleLogs();
-  purge.executePlatformPurge();
-  swGuard.installServiceWorkerDevGuard();
-  issues.installRuntimeIssueCollector();
-  perf.installFetchPerfLogger();
-  perf.recordPageLoad();
-  media.installMediaTrackRegistry();
-  preloader.startIdleRoutePreloader();
-  voices.initializeAssistantVoices()
-    .then(() => console.log("[Main] Assistant voice system initialized (default: Zoe)"))
-    .catch((err) => console.warn("[Main] Voice system init skipped (non-critical):", err?.message || err));
-};
+const deferredInit = () => runDeferredInitializers([
+  { name: 'compatibility', run: async () => (await import('./utils/crossBrowserCompat')).initCrossBrowserCompat() },
+  { name: 'Safari', run: async () => (await import('./utils/safariBrowserFixes')).initSafariFixes() },
+  { name: 'platform purge', run: async () => {
+    const purge = await import('@/lib/platformPurge');
+    purge.truncateConsoleLogs();
+    await purge.executePlatformPurge();
+  } },
+  { name: 'route preloader', run: async () => (await import('@/lib/idleRoutePreloader')).startIdleRoutePreloader() },
+  { name: 'assistant voices', run: async () => {
+    await (await import('./utils/assistantVoice')).initializeAssistantVoices();
+    console.log('[Main] Assistant voice system initialized (default: Zoe)');
+  } },
+  { name: 'service worker guard', run: async () => (await import('@/lib/serviceWorkerDevGuard')).installServiceWorkerDevGuard() },
+  { name: 'runtime diagnostics', run: async () => (await import('@/features/zoe-godmode/runtimeIssueCollector')).installRuntimeIssueCollector() },
+  { name: 'performance diagnostics', run: async () => {
+    const perf = await import('@/utils/perfLogger');
+    perf.installFetchPerfLogger();
+    perf.recordPageLoad();
+  } },
+  { name: 'media registry', run: async () => (await import('@/lib/mediaTrackRegistry')).installMediaTrackRegistry() },
+]);
 if ('requestIdleCallback' in window) {
   (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void }).requestIdleCallback(deferredInit, { timeout: 3000 });
 } else {
