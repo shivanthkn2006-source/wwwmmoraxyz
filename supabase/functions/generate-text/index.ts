@@ -17,12 +17,14 @@ import { clientErrorResponse } from '../_shared/client-error.ts';
 // Pre-fetch API key at module load for faster cold starts
 const SOVEREIGN_AI_KEY = sovereignKey();
 
+export const ALLOWED_MODELS = ['google/gemini-2.5-flash', 'google/gemini-2.5-flash-image-preview', 'google/gemini-3-pro-image-preview'] as const;
+
 const requestSchema = z.object({
   prompt: z.string()
     .min(1, { message: 'Prompt is required' })
     .max(2000, { message: 'Prompt must be less than 2000 characters' })
     .trim(),
-  model: z.string().optional().default('google/gemini-2.5-flash'),
+  model: z.enum(ALLOWED_MODELS).optional().default('google/gemini-2.5-flash'),
   generateImage: z.boolean().optional().default(false),
   userId: z.string().uuid().optional(),
 });
