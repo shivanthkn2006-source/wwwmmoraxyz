@@ -17,7 +17,7 @@ import { clientErrorResponse } from '../_shared/client-error.ts';
 // Pre-fetch API key at module load for faster cold starts
 const SOVEREIGN_AI_KEY = sovereignKey();
 
-export const ALLOWED_MODELS = ['google/gemini-2.5-flash', 'google/gemini-2.5-flash-image-preview', 'google/gemini-3-pro-image-preview'] as const;
+import { ALLOWED_MODELS, selectModel } from './model-policy.ts';
 
 const requestSchema = z.object({
   prompt: z.string()
@@ -57,9 +57,7 @@ serve(async (req) => {
     }
 
     // Determine if this is an image generation request
-    const isImageRequest = model === 'google/gemini-2.5-flash-image-preview' || 
-                           model === 'google/gemini-3-pro-image-preview' ||
-                           generateImage;
+    const { isImageRequest, selectedModel } = selectModel(model, generateImage);
 
     // For image requests: try Pollinations first, then Gemini fallback
     if (isImageRequest) {
@@ -99,7 +97,6 @@ serve(async (req) => {
       console.log(`[generate-text:${requestId}] Falling back to Gemini for image...`);
     }
 
-    const selectedModel = isImageRequest ? 'google/gemini-3.1-flash-image-preview' : (model || 'google/gemini-2.5-flash');
     const latencyTarget = getLatencyTarget(selectedModel);
 
     console.log(`[generate-text:${requestId}] model=${selectedModel}, prompt_length=${prompt.length}`);
