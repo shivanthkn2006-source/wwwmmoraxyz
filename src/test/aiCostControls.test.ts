@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { readFallbackPricePolicy } from '../../supabase/functions/_shared/fallback-price-policy';
+import { guardedPaidCall, createRpcBudgetStore, actualUsdFromUsage, estimatePromptTokens } from '../../supabase/functions/_shared/budget-store';
+import { worstCaseUsd } from '../../supabase/functions/_shared/inference-budget';
+const budgetGlobals = (rpc: any) => ({ guardedPaidCall, createRpcBudgetStore, actualUsdFromUsage, estimatePromptTokens, worstCaseUsd, serviceRpc: () => rpc });
+const okLedger = async (fn: string) => ({ data: fn === 'reserve_ai_budget' ? 'hold-1' : true, error: null });
 
 function load(file: string, globals: Record<string, unknown> = {}) {
   const original = readFileSync(`supabase/functions/_shared/${file}.ts`, 'utf8');
@@ -91,8 +95,15 @@ describe('OpenRouter auto requires operator price ceilings', () => {
   });
   it('sends configured ceilings in the real fallback request', async () => {
     const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ choices: [{ message: { content: 'mock reply' } }] })));
-    const ctx = load('cascading-provider', { readFallbackPricePolicy, setTimeout: () => 0, Deno: { env: { get: (key: string) => key === 'OPENROUTER_API_KEY' ? 'mock' : approved[key as keyof typeof approved] } }, fetch });
+    const budgets: Record<string, string> = { AI_MEMBER_DAILY_BUDGET_USD: '1', AI_PLATFORM_DAILY_BUDGET_USD: '10' };
+    const ctx = load('cascading-provider', { readFallbackPricePolicy, ...budgetGlobals(okLedger), setTimeout: () => 0, Deno: { env: { get: (key: string) => key === 'OPENROUTER_API_KEY' ? 'mock' : budgets[key] ?? approved[key as keyof typeof approved] } }, fetch });
     expect((await ctx.callOpenRouter([], {})).content).toBe('mock reply');
     expect(JSON.parse(fetch.mock.calls[0]?.[1]?.body as string).provider).toEqual({ max_price: { prompt: 0.17, completion: 0.29, request: 0 } });
+  });
+  it('skips the paid fallback (no fetch) when budgets are blank', async () => {
+    const fetch = vi.fn();
+    const ctx = load('cascading-provider', { readFallbackPricePolicy, ...budgetGlobals(okLedger), setTimeout: () => 0, Deno: { env: { get: (key: string) => key === 'OPENROUTER_API_KEY' ? 'mock' : approved[key as keyof typeof approved] } }, fetch });
+    expect((await ctx.callOpenRouter([], {})).reasonCode).toBe('budget_unavailable');
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

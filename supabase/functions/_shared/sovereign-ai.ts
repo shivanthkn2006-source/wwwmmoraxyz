@@ -1,6 +1,7 @@
 import { cascadeFetch } from './image-cascade.ts';
 import { readJsonBounded, readTextBounded } from './cascade-image-download.ts';
 import { readFallbackPricePolicy } from './fallback-price-policy.ts';
+import { guardedPaidCall, createRpcBudgetStore, serviceRpc } from './budget-store.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN AI SHIM — drop-in replacement for the Lovable AI Gateway
@@ -527,21 +528,33 @@ async function callOpenRouter(payload: any): Promise<Response | null> {
   if (payload.tool_choice) body.tool_choice = payload.tool_choice;
   if (payload.stream) body.stream = true;
 
-  const resp = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://myzoe.xyz',
-      'X-Title': 'Zoe Infinity',
-    },
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    console.warn('[sovereign-ai] openrouter failed', resp.status, (await resp.clone().text()).slice(0, 200));
+  // Response may stream, so usage is unknown: the full worst-case hold is settled.
+  const get = (k: string) => Deno.env.get(k);
+  try {
+    const guarded = await guardedPaidCall<Response>({
+      get, store: createRpcBudgetStore(serviceRpc(get)), memberId: typeof payload.memberId === 'string' ? payload.memberId : 'platform',
+      priceCap: provider, messages: body.messages, maxCompletionTokens: Number(body.max_tokens) > 0 ? Number(body.max_tokens) : 4096,
+      run: async () => {
+        const resp = await fetch(OPENROUTER_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://myzoe.xyz',
+            'X-Title': 'Zoe Infinity',
+          },
+          body: JSON.stringify(body),
+        });
+        if (!resp.ok) throw new Error(`openrouter ${resp.status} ${(await resp.text()).slice(0, 200)}`);
+        return { value: resp, actualUsd: Number.POSITIVE_INFINITY };
+      },
+    });
+    if ('skipped' in guarded) { console.warn('[sovereign-ai] openrouter skipped', guarded.skipped); return null; }
+    return guarded.value;
+  } catch (e) {
+    console.warn('[sovereign-ai] openrouter failed', String(e).slice(0, 200));
     return null;
   }
-  return resp;
 }
 
 // ───────────── image generation ─────────────
