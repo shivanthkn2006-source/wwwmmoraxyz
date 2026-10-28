@@ -44,6 +44,7 @@ interface Post {
   likes_count: number;
   comments_count: number;
   created_at: string;
+  ai_generated?: boolean | null;
   private_timeline_id?: string | null;
   profile?: {
     display_name: string;
@@ -965,6 +966,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate, onMediaCompleted })
           <span className="text-xs text-white/70">
             {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
           </span>
+          {post.ai_generated && (
+            <span className="rounded-full border border-white/40 px-2 py-0.5 text-[10px] font-medium text-white/90">AI-generated</span>
+          )}
         </div>
         {post.content && displayMediaUrl && (
           <p className="line-clamp-2 text-sm text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]">

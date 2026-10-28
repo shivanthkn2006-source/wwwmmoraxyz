@@ -53,6 +53,8 @@ interface ReportRow {
   /** Real moderator-set flag, persisted on the row (not a text guess). */
   is_spam: boolean;
   created_at: string;
+  priority?: string | null;
+  due_at?: string | null;
 }
 
 
@@ -109,7 +111,7 @@ export default function AdminControlPanelPage() {
           .limit(200),
         supabase
           .from('content_reports')
-          .select('id, reporter_id, target_type, target_id, reason, notes, status, is_spam, created_at')
+          .select('id, reporter_id, target_type, target_id, reason, notes, status, is_spam, created_at, priority, due_at')
           .order('created_at', { ascending: false })
           .limit(200),
       ]);
@@ -219,9 +221,16 @@ export default function AdminControlPanelPage() {
   const isSpam = (r: ReportRow) => r.is_spam || /spam|scam|bot/i.test(r.reason);
 
   const visibleReports = useMemo(() => {
-    if (reportFilter === 'all') return reports;
-    if (reportFilter === 'spam') return reports.filter(isSpam);
-    return reports.filter((r) => r.status === reportFilter);
+    const filtered =
+      reportFilter === 'all' ? reports
+      : reportFilter === 'spam' ? reports.filter(isSpam)
+      : reports.filter((r) => r.status === reportFilter);
+    // Open/reviewing first, then urgent before normal, then soonest due.
+    const active = (r: ReportRow) => (r.status === 'open' || r.status === 'reviewing' ? 0 : 1);
+    const due = (r: ReportRow) => (r.due_at ? new Date(r.due_at).getTime() : Number.MAX_SAFE_INTEGER);
+    return [...filtered].sort((x, y) =>
+      active(x) - active(y)
+      || (active(x) === 0 ? (x.priority === 'urgent' ? 0 : 1) - (y.priority === 'urgent' ? 0 : 1) || due(x) - due(y) : 0));
   }, [reports, reportFilter]);
 
 
@@ -392,6 +401,12 @@ export default function AdminControlPanelPage() {
                       <div key={report.id} className="rounded-lg border border-border/60 p-3 text-xs">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge className={statusTone[report.status] ?? ''}>{report.status}</Badge>
+                          {report.priority === 'urgent' && (
+                            <Badge className="bg-red-500/15 text-red-400">Urgent</Badge>
+                          )}
+                          {report.due_at && new Date(report.due_at).getTime() < Date.now() && (report.status === 'open' || report.status === 'reviewing') && (
+                            <Badge className="bg-red-500/25 text-red-300">Overdue</Badge>
+                          )}
                           <span className="font-medium">{report.target_type}</span>
                           <span className="font-mono text-muted-foreground">{report.target_id.slice(0, 8)}</span>
                           {report.is_spam ? (

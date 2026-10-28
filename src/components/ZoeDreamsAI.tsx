@@ -225,7 +225,8 @@ Provide analysis in a warm, insightful tone that helps the user understand thems
       const { error } = await supabase.from('posts').insert({
         user_id: user.id,
         content: postContent,
-        visibility: 'public'
+        visibility: 'public',
+        ai_generated: true
       });
       
       if (error) throw error;

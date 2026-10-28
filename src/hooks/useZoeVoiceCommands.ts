@@ -587,6 +587,7 @@ export const useZoeVoiceCommands = (userId: string | undefined) => {
             media_url: data.imageUrl,
             media_type: 'image/generated',
             visibility,
+            ai_generated: true,
           });
           if (postErr) {
             console.error('[Zoe] post insert failed', postErr);

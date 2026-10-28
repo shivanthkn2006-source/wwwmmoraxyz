@@ -77,7 +77,7 @@ const PURPOSE: Record<string, string> = {
 
 const AREA_RULES: Array<[SiteArea, (p: string) => boolean]> = [
   ['Admin', (p) => p.startsWith('/admin') || p.startsWith('/god-mode') || p === '/sentinel' || p === '/security' || p === '/attack-response' || p === '/root-scan' || p === '/platform-audit'],
-  ['Start', (p) => ['/', '/auth', '/voice-auth', '/about', '/install', '/beta', '/help', '/map', '/documents', '/terms', '/data-policy'].includes(p)],
+  ['Start', (p) => ['/', '/auth', '/voice-auth', '/about', '/install', '/beta', '/help', '/map', '/documents', '/terms', '/data-policy', '/report-abuse'].includes(p)],
   ['Daily', (p) => ['/home', '/mosaic', '/selfie-city', '/universal-timeline', '/compass'].includes(p)],
   ['Create', (p) => ['/camera', '/quantum-camera', '/webdrop', '/merchant'].includes(p)],
   ['Connect', (p) => p.startsWith('/chat') || p.startsWith('/profile') || ['/huddle', '/exodus', '/exodus-map'].includes(p)],

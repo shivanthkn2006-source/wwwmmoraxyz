@@ -85,6 +85,13 @@
       "when": 1793003241305,
       "tag": "0011_spend_credits",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793167488976,
+      "tag": "0012_ai_generated_posts_and_report_priority",
+      "breakpoints": true
     }
   ]
 }

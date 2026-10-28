@@ -667,7 +667,7 @@ const AuthPage = () => {
                 </div>
               )}
               <nav aria-label="About M'Mora" className="flex flex-wrap justify-center gap-x-1.5 pt-1 text-[11px] xs:text-xs text-white/75">
-                {[['About', '/about'], ['Terms', '/terms'], ['Help', '/help'], ['Privacy', '/data-policy'], ['Site map', '/map']].map(([label, to], i) => (
+                {[['About', '/about'], ['Terms', '/terms'], ['Help', '/help'], ['Privacy', '/data-policy'], ['Report abuse', '/report-abuse'], ['Site map', '/map']].map(([label, to], i) => (
                   <span key={to} className="flex items-center gap-x-1.5">
                     {i > 0 && <span aria-hidden>/</span>}
                     <a href={to} className="min-h-11 inline-flex items-center px-2 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">{label}</a>
