@@ -221,9 +221,16 @@ export default function AdminControlPanelPage() {
   const isSpam = (r: ReportRow) => r.is_spam || /spam|scam|bot/i.test(r.reason);
 
   const visibleReports = useMemo(() => {
-    if (reportFilter === 'all') return reports;
-    if (reportFilter === 'spam') return reports.filter(isSpam);
-    return reports.filter((r) => r.status === reportFilter);
+    const filtered =
+      reportFilter === 'all' ? reports
+      : reportFilter === 'spam' ? reports.filter(isSpam)
+      : reports.filter((r) => r.status === reportFilter);
+    // Open/reviewing first, then urgent before normal, then soonest due.
+    const active = (r: ReportRow) => (r.status === 'open' || r.status === 'reviewing' ? 0 : 1);
+    const due = (r: ReportRow) => (r.due_at ? new Date(r.due_at).getTime() : Number.MAX_SAFE_INTEGER);
+    return [...filtered].sort((x, y) =>
+      active(x) - active(y)
+      || (active(x) === 0 ? (x.priority === 'urgent' ? 0 : 1) - (y.priority === 'urgent' ? 0 : 1) || due(x) - due(y) : 0));
   }, [reports, reportFilter]);
 
 
