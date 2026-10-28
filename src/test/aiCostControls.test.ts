@@ -61,12 +61,6 @@ describe('counter-store failures never authorize work', () => {
     expect(rpc).toHaveBeenCalledTimes(4);
     for (const call of rpc.mock.calls) expect((call as unknown as [string, { _bucket: string }])[1]._bucket).toBe('mock:default:unknown');
   });
-  it('skips the paid fallback (no fetch) when budgets are blank', async () => {
-    const fetch = vi.fn();
-    const ctx = load('cascading-provider', { readFallbackPricePolicy, ...budgetGlobals(okLedger), setTimeout: () => 0, Deno: { env: { get: (key: string) => key === 'OPENROUTER_API_KEY' ? 'mock' : approved[key as keyof typeof approved] } }, fetch });
-    expect((await ctx.callOpenRouter([], {})).reasonCode).toBe('budget_unavailable');
-    expect(fetch).not.toHaveBeenCalled();
-  });
 });
 
 describe('OpenRouter auto requires operator price ceilings', () => {
@@ -105,5 +99,11 @@ describe('OpenRouter auto requires operator price ceilings', () => {
     const ctx = load('cascading-provider', { readFallbackPricePolicy, ...budgetGlobals(okLedger), setTimeout: () => 0, Deno: { env: { get: (key: string) => key === 'OPENROUTER_API_KEY' ? 'mock' : budgets[key] ?? approved[key as keyof typeof approved] } }, fetch });
     expect((await ctx.callOpenRouter([], {})).content).toBe('mock reply');
     expect(JSON.parse(fetch.mock.calls[0]?.[1]?.body as string).provider).toEqual({ max_price: { prompt: 0.17, completion: 0.29, request: 0 } });
+  });
+  it('skips the paid fallback (no fetch) when budgets are blank', async () => {
+    const fetch = vi.fn();
+    const ctx = load('cascading-provider', { readFallbackPricePolicy, ...budgetGlobals(okLedger), setTimeout: () => 0, Deno: { env: { get: (key: string) => key === 'OPENROUTER_API_KEY' ? 'mock' : approved[key as keyof typeof approved] } }, fetch });
+    expect((await ctx.callOpenRouter([], {})).reasonCode).toBe('budget_unavailable');
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
