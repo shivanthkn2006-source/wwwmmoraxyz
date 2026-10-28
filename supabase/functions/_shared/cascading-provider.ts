@@ -19,6 +19,8 @@
 
 import { applyCircuitBreaker } from './loop-breaker.ts';
 import { readFallbackPricePolicy } from './fallback-price-policy.ts';
+import { guardedPaidCall, createRpcBudgetStore, serviceRpc, actualUsdFromUsage, estimatePromptTokens } from './budget-store.ts';
+import { worstCaseUsd } from './inference-budget.ts';
 import { nvidiaChatByRole, NVIDIA_ROLES, type NvidiaRole } from './nvidia-provider.ts';
 
 async function callNvidia(messages: Message[], opts: CascadeOptions): Promise<ProviderOutcome> {
@@ -87,6 +89,8 @@ export interface CascadeOptions {
   mode?: CascadeMode;
   /** Task role — selects the NVIDIA NIM model chain on the T5 tier (deep_thinking, chat, fast, creative, ...). */
   nvidiaRole?: NvidiaRole;
+  /** Verified member id for the paid-fallback budget hold (defaults to 'platform'). */
+  memberId?: string;
 }
 
 interface Message {
@@ -250,33 +254,40 @@ async function callOpenRouter(messages: Message[], opts: CascadeOptions): Promis
   if (!apiKey) return { content: null, status: null, reasonCode: 'missing_key', reasonText: 'OPENROUTER_API_KEY not set' };
   const provider = readFallbackPricePolicy(key => Deno.env.get(key));
   if (!provider) return { content: null, status: null, reasonCode: 'price_policy_unavailable', reasonText: 'OpenRouter fallback skipped: operator price ceilings are missing or invalid' };
+  const get = (k: string) => Deno.env.get(k);
+  const maxTokens = opts.maxTokens ?? 500;
+  const hold = worstCaseUsd(provider.max_price, estimatePromptTokens(messages), maxTokens);
   try {
-    const resp = await withTimeout(fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://myzoe.xyz',
-        'X-Title': 'Zoe Infinity',
+    const guarded = await guardedPaidCall<ProviderOutcome>({
+      get, store: createRpcBudgetStore(serviceRpc(get)), memberId: opts.memberId ?? 'platform',
+      priceCap: provider, messages, maxCompletionTokens: maxTokens,
+      run: async () => {
+        const resp = await withTimeout(fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://myzoe.xyz',
+            'X-Title': 'Zoe Infinity',
+          },
+          body: JSON.stringify({ model: 'openrouter/auto', provider, messages, max_tokens: maxTokens, temperature: opts.temperature ?? 0.7 }),
+        }), opts.timeoutMs ?? 25_000);
+        if (!resp.ok) {
+          const raw = await resp.text();
+          const { code, text } = classifyStatus(resp.status, raw);
+          throw Object.assign(new Error(text), { outcome: { content: null, status: resp.status, reasonCode: code, reasonText: text } });
+        }
+        const data = await resp.json();
+        const content = data.choices?.[0]?.message?.content ?? null;
+        const actualUsd = actualUsdFromUsage(provider.max_price, data.usage, hold);
+        if (!content) return { value: { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' }, actualUsd };
+        return { value: { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' }, actualUsd };
       },
-      body: JSON.stringify({
-        model: 'openrouter/auto',
-        provider,
-        messages,
-        max_tokens: opts.maxTokens ?? 500,
-        temperature: opts.temperature ?? 0.7,
-      }),
-    }), opts.timeoutMs ?? 25_000);
-    if (!resp.ok) {
-      const raw = await resp.text();
-      const { code, text } = classifyStatus(resp.status, raw);
-      return { content: null, status: resp.status, reasonCode: code, reasonText: text };
-    }
-    const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content ?? null;
-    if (!content) return { content: null, status: resp.status, reasonCode: 'empty_response', reasonText: 'no choices[0].content' };
-    return { content, status: resp.status, reasonCode: 'success', reasonText: 'ok' };
+    });
+    if ('skipped' in guarded) return { content: null, status: null, reasonCode: 'budget_unavailable', reasonText: `OpenRouter fallback skipped: ${guarded.skipped}` };
+    return guarded.value;
   } catch (e: any) {
+    if (e?.outcome) return e.outcome;
     const isTimeout = e?.message === 'timeout';
     return { content: null, status: null, reasonCode: isTimeout ? 'timeout' : 'network_error', reasonText: String(e?.message ?? e) };
   }
