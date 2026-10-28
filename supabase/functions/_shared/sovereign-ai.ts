@@ -1,7 +1,7 @@
 import { cascadeFetch } from './image-cascade.ts';
 import { readJsonBounded, readTextBounded } from './cascade-image-download.ts';
 import { readFallbackPricePolicy } from './fallback-price-policy.ts';
-import { guardedPaidCall, createRpcBudgetStore, serviceRpc } from './budget-store.ts';
+import { guardedPaidCall, createRpcBudgetStore, serviceRpc, actualUsdFromUsage } from './budget-store.ts';
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
  * SOVEREIGN AI SHIM — drop-in replacement for the Lovable AI Gateway
@@ -361,29 +361,40 @@ async function callOpenAICompatVision(
       if (pricePolicy) body.provider = pricePolicy;
       if (payload.temperature !== undefined) body.temperature = payload.temperature;
       if (payload.response_format?.type === 'json_object') body.response_format = payload.response_format;
-      const resp = await cascadeFetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...extraHeaders },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (!resp.ok) {
-        console.warn(`[sovereign-ai] ${provider} vision failed`, resp.status, model, (await readTextBounded(resp, 4096))?.slice(0, 200) ?? '');
-        continue;
-      }
-      const data = await readJsonBounded<any>(resp, 2 * 1024 * 1024);
-      // OpenRouter can return HTTP 200 with an embedded upstream error.
-      if (data?.error) {
-        console.warn(`[sovereign-ai] ${provider} vision upstream error`, model, JSON.stringify(data.error).slice(0, 200));
-        continue;
-      }
-      let content = data?.choices?.[0]?.message?.content;
-      if (Array.isArray(content)) content = content.map((p: any) => p?.text ?? '').join('');
-      if (typeof content !== 'string' || !content.trim()) continue;
-      // Reasoning models may wrap thinking in <think>…</think>; never leak it.
-      content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-      if (!content) continue;
-      return json(chatShape(content, `${provider}/${model}`, undefined, data?.usage));
+      const attempt = async () => {
+        const resp = await cascadeFetch(url, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...extraHeaders },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (!resp.ok) {
+          console.warn(`[sovereign-ai] ${provider} vision failed`, resp.status, model, (await readTextBounded(resp, 4096))?.slice(0, 200) ?? '');
+          throw new Error('attempt_failed');
+        }
+        const data = await readJsonBounded<any>(resp, 2 * 1024 * 1024);
+        // OpenRouter can return HTTP 200 with an embedded upstream error.
+        if (data?.error) {
+          console.warn(`[sovereign-ai] ${provider} vision upstream error`, model, JSON.stringify(data.error).slice(0, 200));
+          throw new Error('attempt_failed');
+        }
+        let content = data?.choices?.[0]?.message?.content;
+        if (Array.isArray(content)) content = content.map((p: any) => p?.text ?? '').join('');
+        if (typeof content !== 'string' || !content.trim()) throw new Error('attempt_failed');
+        // Reasoning models may wrap thinking in <think>…</think>; never leak it.
+        content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        if (!content) throw new Error('attempt_failed');
+        return { value: json(chatShape(content, `${provider}/${model}`, undefined, data?.usage)), actualUsd: pricePolicy ? actualUsdFromUsage(pricePolicy.max_price, data?.usage, Number.POSITIVE_INFINITY) : 0 };
+      };
+      if (!pricePolicy) { try { return (await attempt()).value; } catch { continue; } }
+      const get = (k: string) => Deno.env.get(k);
+      const guarded = await guardedPaidCall<Response>({
+        get, store: createRpcBudgetStore(serviceRpc(get)), memberId: typeof payload.memberId === 'string' ? payload.memberId : 'platform',
+        priceCap: pricePolicy, messages, maxCompletionTokens: body.max_tokens, run: attempt,
+      }).catch(() => null);
+      if (guarded && 'skipped' in guarded) { console.warn('[sovereign-ai] openrouter vision skipped', guarded.skipped); return null; }
+      if (guarded) return guarded.value;
+      continue;
     } catch (e) {
       console.warn(`[sovereign-ai] ${provider} vision threw`, model, e);
     }
@@ -628,32 +639,44 @@ export async function openRouterImage(prompt: string, inputImages: string[]): Pr
   try {
     const content: any[] = [{ type: 'text', text: prompt }];
     for (const url of inputImages) content.push({ type: 'image_url', image_url: { url } });
-    const resp = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://mmora.xyz',
-        'X-Title': "M'Mora Zoe",
+    const messages = [{ role: 'user', content }];
+    // Image cost is per picture: fold the image ceiling into the per-request hold.
+    const cap = { max_price: { ...provider.max_price, request: provider.max_price.request + (provider.max_price.image ?? 0) } };
+    const get = (k: string) => Deno.env.get(k);
+    const guarded = await guardedPaidCall<string>({
+      get, store: createRpcBudgetStore(serviceRpc(get)), memberId: 'platform', priceCap: cap, messages, maxCompletionTokens: 4096,
+      run: async () => {
+      const resp = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://mmora.xyz',
+          'X-Title': "M'Mora Zoe",
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_IMAGE,
+          provider,
+          messages: [{ role: 'user', content }],
+          modalities: ['image', 'text'],
+        }),
+      });
+      if (!resp.ok) {
+        console.warn('[sovereign-ai] openrouter image failed', resp.status, (await resp.text()).slice(0, 200));
+        throw new Error('image_failed');
+      }
+      const data = await resp.json();
+      if (data?.error) {
+        console.warn('[sovereign-ai] openrouter image upstream error', JSON.stringify(data.error).slice(0, 200));
+        throw new Error('image_failed');
+      }
+      const img = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (typeof img !== 'string' || !img.startsWith('data:')) throw new Error('image_failed');
+      return { value: img, actualUsd: Number.POSITIVE_INFINITY };
       },
-      body: JSON.stringify({
-        model: OPENROUTER_IMAGE,
-        provider,
-        messages: [{ role: 'user', content }],
-        modalities: ['image', 'text'],
-      }),
     });
-    if (!resp.ok) {
-      console.warn('[sovereign-ai] openrouter image failed', resp.status, (await resp.text()).slice(0, 200));
-      return null;
-    }
-    const data = await resp.json();
-    if (data?.error) {
-      console.warn('[sovereign-ai] openrouter image upstream error', JSON.stringify(data.error).slice(0, 200));
-      return null;
-    }
-    const img = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    return typeof img === 'string' && img.startsWith('data:') ? img : null;
+    if ('skipped' in guarded) { console.warn('[sovereign-ai] openrouter image skipped', guarded.skipped); return null; }
+    return guarded.value;
   } catch (e) {
     console.warn('[sovereign-ai] openrouter image error', e);
     return null;

@@ -76,3 +76,27 @@ describe('Zoe fallback paths are wired to the hold', () => {
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public.reserve_ai_budget/);
   });
 });
+
+describe('picture and photo-reading fallbacks use the hold', () => {
+  const src = readFileSync('supabase/functions/_shared/sovereign-ai.ts', 'utf8');
+  it('photo reading: OpenRouter attempt runs only via guardedPaidCall', () => {
+    const fn = src.slice(src.indexOf('async function callOpenAICompatVision('));
+    const body = fn.slice(0, fn.indexOf('\n}\n'));
+    expect(body).toMatch(/if \(!pricePolicy\) \{ try \{ return \(await attempt\(\)\)\.value/);
+    expect(body).toMatch(/guardedPaidCall<Response>\(\{[\s\S]*run: attempt/);
+  });
+  it('picture generation: fetch sits inside guardedPaidCall run', () => {
+    const fn = src.slice(src.indexOf('export async function openRouterImage('));
+    const body = fn.slice(0, fn.indexOf('\n}\n'));
+    expect(body.indexOf('guardedPaidCall')).toBeGreaterThan(-1);
+    expect(body.indexOf('guardedPaidCall')).toBeLessThan(body.indexOf('fetch('));
+    expect(body).toMatch(/request: provider\.max_price\.request \+ \(provider\.max_price\.image/);
+  });
+  it('image hold includes the per-picture ceiling and settles the full hold', async () => {
+    const db = mockDb();
+    const imgCap = { max_price: { prompt: 1, completion: 2, request: 0.001 + 0.04 } };
+    const r = await guardedPaidCall({ get: env({ AI_MEMBER_DAILY_BUDGET_USD: '1', AI_PLATFORM_DAILY_BUDGET_USD: '1' }), store: createRpcBudgetStore(db.rpc), memberId: 'platform', priceCap: imgCap, messages: [], maxCompletionTokens: 0, run: async () => ({ value: 'data:img', actualUsd: Infinity }) });
+    expect(r).toEqual({ value: 'data:img' });
+    expect([...db.rows.values()][0].a).toBeCloseTo(0.041 + 0.0000005, 4);
+  });
+});
