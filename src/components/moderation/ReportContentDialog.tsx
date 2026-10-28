@@ -31,8 +31,13 @@ export const REPORT_REASONS = [
   'Violence or self-harm',
   'Misinformation',
   'Impersonation',
+  'Intimate image shared without consent',
+  'Child safety concern',
+  'Deepfake or AI impersonation',
   'Something else',
 ] as const;
+
+const URGENT_REASONS: readonly string[] = ['Intimate image shared without consent', 'Child safety concern'];
 
 interface Props {
   open: boolean;
@@ -114,6 +119,10 @@ export const ReportContentDialog: React.FC<Props> = ({
               </Button>
             ))}
           </div>
+
+          {URGENT_REASONS.includes(reason) && (
+            <p className="text-xs text-muted-foreground">We prioritise this and aim to act within 24 hours.</p>
+          )}
 
           <Textarea
             value={notes}

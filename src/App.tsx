@@ -163,6 +163,7 @@ const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const VaultGate = lazy(() => import("./components/admin/VaultGate"));
 const SiteMapPage = lazy(() => import("./pages/SiteMapPage"));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
+const ReportAbusePage = lazy(() => import("./pages/ReportAbusePage"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const DemoPage = lazy(() => import("./pages/DemoPage")); // PUBLIC DEMO: real shared account
 const XImportPage = lazy(() => import("./pages/XImportPage")); // Save a public X post into Home
@@ -509,6 +510,7 @@ const RouteAwareShell = () => {
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/data-policy" element={<DataPolicyPage />} />
               <Route path="/help" element={<HelpPage />} />
+              <Route path="/report-abuse" element={<ReportAbusePage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/map" element={<SiteMapPage />} />
               <Route path="/signup" element={<AuthPage />} />
@@ -1062,6 +1064,7 @@ const RouteAwareShell = () => {
                           {/* Member orientation: full site map + plain-language guides. */}
                           <Route path="/map" element={<SiteMapPage />} />
                           <Route path="/help" element={<HelpPage />} />
+                          <Route path="/report-abuse" element={<ReportAbusePage />} />
                           {/* Bluetooth headset routing for Zoe's voice (Deepgram output + headset mic). */}
                           <Route
                             path="/zoe-audio"

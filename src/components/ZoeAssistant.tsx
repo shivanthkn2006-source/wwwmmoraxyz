@@ -3662,7 +3662,8 @@ const ZoeAssistant: React.FC<ZoeAssistantProps> = ({ onNavigate }) => {
         .insert({
           user_id: user.id,
           content: postContent,
-          visibility: 'global'
+          visibility: 'global',
+          ai_generated: true
         });
 
       if (postError) throw postError;

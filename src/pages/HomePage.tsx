@@ -1540,7 +1540,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, ai_generated, has_deferred_media, media_size, media_preview_url')
         .in('visibility', ['global', 'personal'])
         .is('private_timeline_id', null)
         .order('created_at', { ascending: false })
@@ -1671,7 +1671,7 @@ const HomePage = () => {
       // over multi-megabyte media_url values (those caused statement timeouts).
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url, has_deferred_media, media_size')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, ai_generated, private_timeline_id, media_preview_url, has_deferred_media, media_size')
         .in('visibility', ['global', 'personal'])
         .is('private_timeline_id', null)
         .eq('is_video', true)
@@ -1759,7 +1759,7 @@ const HomePage = () => {
       // SIMPLIFIED: Fetch posts first without complex joins to avoid JSON parse errors
       const postsResult = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, ai_generated, has_deferred_media, media_size, media_preview_url')
         .eq('visibility', 'personal')
         .is('private_timeline_id', null)
         .in('user_id', [...friendIds, user.id])
@@ -2378,7 +2378,7 @@ const HomePage = () => {
     try {
       const { data, error } = await (supabase as any)
         .from('feed_posts_safe')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, has_deferred_media, media_size, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, ai_generated, has_deferred_media, media_size, media_preview_url')
         .eq('id', postId)
         .maybeSingle();
       if (error) throw error;
@@ -2405,7 +2405,7 @@ const HomePage = () => {
     try {
       const { data, error } = await (supabase as any)
         .from('posts')
-        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, private_timeline_id, media_preview_url')
+        .select('id, user_id, content, media_url, media_type, likes_count, comments_count, created_at, updated_at, visibility, ai_generated, private_timeline_id, media_preview_url')
         .eq('id', postId)
         .maybeSingle();
       if (error) throw error;
