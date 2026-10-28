@@ -78,6 +78,11 @@ export function needsDecision(): boolean {
   return regionState === 'consent-region' && !getConsent();
 }
 
+/** Country code from the last region lookup ('XX' when unknown). */
+export function getRegionCode(): string {
+  return regionCode;
+}
+
 export function getRegionState(): RegionState {
   return regionState;
 }

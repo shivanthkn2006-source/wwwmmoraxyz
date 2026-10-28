@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Fragment, useState, useEffect, useRef, useCallback } from 'react';
+import { detectCrisis, getCrisisResources } from '@/lib/crisisSupport';
+import { getRegionCode } from '@/lib/consent';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,6 +60,8 @@ export const ZoeChat = () => {
   const [voiceMode, setVoiceMode] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Crisis cards are display-only, keyed by message index, never saved or sent to Zoe.
+  const [crisisAt, setCrisisAt] = useState<Record<number, string>>({});
   const [showSearchResults, setShowSearchResults] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -208,7 +212,14 @@ export const ZoeChat = () => {
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const showCrisis = detectCrisis(userMessage.content);
+    setMessages(prev => {
+      if (showCrisis) {
+        const at = prev.length;
+        setCrisisAt(c => ({ ...c, [at]: getCrisisResources(getRegionCode()) }));
+      }
+      return [...prev, userMessage];
+    });
     setInput('');
     setIsLoading(true);
 
@@ -493,8 +504,8 @@ export const ZoeChat = () => {
             </div>
           ) : (
             messages.map((msg, idx) => (
+              <Fragment key={idx}>
               <div
-                key={idx}
                 className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}
               >
                 {msg.role === 'assistant' && (
@@ -560,6 +571,14 @@ export const ZoeChat = () => {
                   </TooltipProvider>
                 </div>
               </div>
+              {crisisAt[idx] && (
+                <div role="note" className="mx-auto max-w-[85%] rounded-lg border border-border bg-muted p-3 text-sm">
+                  <p className="font-medium">You don't have to go through this alone.</p>
+                  <p className="mt-1">{crisisAt[idx]}</p>
+                  <p className="mt-1 text-muted-foreground">If you can, reach out to someone you trust and let them know how you're feeling.</p>
+                </div>
+              )}
+              </Fragment>
             ))
           )}
           
@@ -638,6 +657,7 @@ export const ZoeChat = () => {
           }))}
           showMic={speechSupported}
         />
+        <p className="mt-1 text-center text-xs text-muted-foreground">Zoe is an AI, not a person, doctor or counsellor.</p>
       </div>
     </Card>
   );
