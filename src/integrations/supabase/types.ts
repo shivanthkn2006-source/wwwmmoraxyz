@@ -1461,9 +1461,11 @@ export type Database = {
       content_reports: {
         Row: {
           created_at: string
+          due_at: string | null
           id: string
           is_spam: boolean
           notes: string | null
+          priority: string
           reason: string
           reporter_id: string
           review_note: string | null
@@ -1477,9 +1479,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          due_at?: string | null
           id?: string
           is_spam?: boolean
           notes?: string | null
+          priority?: string
           reason: string
           reporter_id: string
           review_note?: string | null
@@ -1493,9 +1497,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          due_at?: string | null
           id?: string
           is_spam?: boolean
           notes?: string | null
+          priority?: string
           reason?: string
           reporter_id?: string
           review_note?: string | null
@@ -6689,6 +6695,7 @@ export type Database = {
       }
       posts: {
         Row: {
+          ai_generated: boolean
           comments_count: number
           content: string | null
           created_at: string
@@ -6710,6 +6717,7 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          ai_generated?: boolean
           comments_count?: number
           content?: string | null
           created_at?: string
@@ -6731,6 +6739,7 @@ export type Database = {
           visibility: string
         }
         Update: {
+          ai_generated?: boolean
           comments_count?: number
           content?: string | null
           created_at?: string
